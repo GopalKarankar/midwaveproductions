@@ -1,0 +1,18 @@
+import mongoose from "mongoose";
+
+const MediaAssetSchema = new mongoose.Schema(
+  {
+    artistId: { type: mongoose.Schema.Types.ObjectId, ref: "Artist" },
+    uploadedBy: { type: String, required: true },
+    type: { type: String, enum: ["image", "audio", "video", "document"], required: true },
+    url: { type: String, required: true },
+    storagePath: { type: String, required: true },
+    filename: { type: String },
+    size: { type: Number },
+    mimeType: { type: String },
+    label: { type: String },
+  },
+  { timestamps: true }
+);
+
+export default mongoose.models.MediaAsset || mongoose.model("MediaAsset", MediaAssetSchema);

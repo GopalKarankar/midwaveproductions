@@ -1,0 +1,28 @@
+"use client";
+import { ArrowLink } from "@/components/ui/ArrowLink";
+import { SectionNumber } from "@/components/ui/SectionNumber";
+
+export function PillCard({ entry }) {
+  const { n, title, sub, action, href } = entry;
+  return (
+    <div className="flex flex-col items-center justify-center w-40 shrink-0 h-56 px-6 py-8 rounded-full border border-border bg-surface hover:border-accent transition-colors duration-200">
+      <SectionNumber n={n} />
+      <h3 className="font-display text-4xl text-accent-2 leading-none text-center mt-2 mb-2">
+        {n}
+      </h3>
+      <p className="font-display text-sm uppercase text-highlight text-center leading-tight mb-2">
+        {title}
+      </p>
+      <p className="font-mono text-xs text-muted text-center mb-4">
+        {sub}
+      </p>
+      <ArrowLink
+        href={href}
+        color={action === "contact" ? "yellow" : "blue"}
+        className="text-xs"
+      >
+        {action}
+      </ArrowLink>
+    </div>
+  );
+}
