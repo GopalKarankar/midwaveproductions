@@ -32,8 +32,8 @@ Source lives under `src/`. No `tailwind.config.js` — Tailwind v4 is CSS-first,
 |---|---|
 | Framework | Next.js 14+ (App Router, JS only) |
 | Auth | Custom Google OAuth (authorization-code flow, httpOnly cookies) — identity/roles in MongoDB |
-| Primary DB | MongoDB (Mongoose) — user identity/roles, artist profiles, media, bookings |
-| File Storage | Supabase Storage (press kits, EPKs, photos, audio) |
+| Primary DB | MongoDB (Mongoose) — user identity/roles, artist profiles, media metadata, bookings |
+| File Storage | Supabase Storage (binary files: images, video, audio, documents/press kits) |
 | Styling | Tailwind CSS v4 (`@theme` in globals.css, no config file) |
 | Animation | Framer Motion |
 | Email | Resend |
@@ -138,7 +138,7 @@ src/
 ## Environment Variables
 
 ```bash
-# Supabase — Storage only (media uploads)
+# Supabase — Storage only (binary files: images, video, audio, documents)
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key  # server-only — never NEXT_PUBLIC_, never imported client-side
@@ -207,14 +207,14 @@ CRON_SECRET=your_cron_secret_token
    Open http://localhost:3000 — you should see the homepage.
 
 7. **Test auth:**
-   - Visit `/login`, click "SIGN IN WITH GOOGLE"
+   - click "SIGN IN WITH GOOGLE"
    - OAuth redirects to Google, then back to http://localhost:3000/auth/callback, which exchanges the code and stores user in MongoDB's `users` collection
    - Check MongoDB: a new document with `googleId`, `email`, `name`, `picture`, and `role` should appear
    - First login as an email in `ADMIN_EMAILS` creates a user with `role: 'admin'`, all others default to `role: 'user'`
 
 8. **Test file uploads:**
    - As a logged-in user, upload test files via admin panel → Media
-   - Files are stored in Supabase Storage bucket `media` (requires Supabase setup above)
+   
 
 ---
 
@@ -234,7 +234,7 @@ All models: `mongoose.models.X || mongoose.model('X', Schema)` guard against re-
 
 ### Supabase (PostgreSQL) — Deprecated from Auth, retained for Storage
 
-No longer used for authentication or role storage. Supabase Storage bucket `media` remains in use for file uploads via `/api/media/upload`.
+No longer used for authentication or role storage. 
 
 ---
 
@@ -279,6 +279,14 @@ export function hasRole(userRole, requiredRole) {
 
 **Google login details (`googleId`, `email`, `name`, `picture`, `role`) are stored in MongoDB via the `User` model — never in Supabase.** This is the single source of truth for user identity and roles. Supabase remains in use only for Storage (media file uploads). If you need to store additional user metadata, add it to the `User` schema in MongoDB, never to a Supabase `profiles` table.
 
+### Media Storage Split Rule
+
+**MongoDB stores metadata/details only; Supabase Storage stores all binary files.** Specifically:
+- MongoDB holds all `MediaAsset` records (text fields: `type`, `url`, `storagePath`, `filename`, `size`, `mimeType`, `label`, `artistId`, `uploadedBy`) — the *reference* to a file, not the file itself.
+- Files are referenced from MongoDB via their `storagePath`/`url`.
+- **Never store raw file bytes in MongoDB** — no base64 blobs, no GridFS. All binary files go through `/api/media/upload` to Supabase Storage; only the metadata/path is written to the `MediaAsset` model.
+- If new binary-file-producing features are added in the future, the file goes to Supabase Storage and only its reference/metadata goes to MongoDB.
+
 ---
 
 ## API Route Conventions
@@ -291,7 +299,7 @@ export function hasRole(userRole, requiredRole) {
   - `DELETE /api/artists/[id]` → admin only
   - `GET /api/bookings` (list) → admin only; `POST /api/bookings` → public, no auth (booking inquiries are public-facing)
   - `PATCH /api/users/[id]/role` → admin only, validates role against `ROLES` enum, writes to MongoDB `users` collection
-- `POST /api/contact` and `POST /api/bookings`: server-side re-validation always (required fields, email regex) — never trust client validation alone.
+- `POST /api/contact` and `POST /api/bookings`: server-side re-validation always (required fields, email regex) — never trust client validation alone. Both routes use `checkRateLimit()` from `lib/rateLimit.js` (in-memory per-IP limiter, best-effort; resets on cold start, not shared across instances). On production (Vercel), swap for `@upstash/ratelimit` using Vercel KV.
 - File uploads (`/api/media/upload`): validate MIME type + size before writing to Supabase Storage; requires `requireRole('artist')` or higher.
 
 ---
@@ -348,7 +356,7 @@ Logo + numbered social links (`1. EMAIL ↗`, etc.) + copyright + `V#001` versio
 - [ ] `GOOGLE_CLIENT_SECRET` is server-side only, never exposed to browser via `NEXT_PUBLIC_` prefix
 - [ ] MongoDB responses always `.select()`-whitelisted in public routes
 - [ ] All user text trimmed/sanitized before DB write
-- [ ] Upload route validates MIME + size before Storage write
+- [ ] Upload route validates MIME + size before Storage write; never store raw file bytes in MongoDB
 - [ ] Booking/contact forms re-validated server-side regardless of client validation
 - [ ] `ADMIN_EMAILS` roles assigned at MongoDB write time, never mutable via client
 - [ ] CSP headers set in `next.config.mjs` (allow Spotify/YouTube/SoundCloud iframes)
@@ -372,8 +380,7 @@ No automated tests are currently configured. When adding tests:
 ## Linting & Code Style
 
 - **ESLint:** Run with `npm run lint` (auto-fix with `--fix` flag)
-- **Config:** ESLint v9+ uses `eslint.config.js` (flat config); older versions use `.eslintrc.json`
-- **Current state:** `eslint` listed in package.json but no config file — add `.eslintrc.json` or `eslint.config.js` with Next.js + React rules
+- **Config:** ESLint v9 flat config in `eslint.config.mjs` extending `eslint-config-next/core-web-vitals`
 - **Formatting:** No Prettier configured — match existing code style (2-space indentation, no semicolons encouraged per Crevixa pattern)
 - **Pre-commit:** Consider a husky + lint-staged hook to run linting before commits (optional)
 
