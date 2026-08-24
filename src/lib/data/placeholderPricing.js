@@ -1,0 +1,55 @@
+export const pricingTiers = [
+  {
+    n: 1,
+    name: "ARTIST PROFILE",
+    price: "FREE",
+    description: "Get discovered",
+    features: [
+      "Artist profile page",
+      "Bio & media uploads",
+      "Social media integration",
+      "Public booking link",
+    ],
+  },
+  {
+    n: 2,
+    name: "MANAGEMENT",
+    price: "$1,000+",
+    description: "Custom per artist",
+    features: [
+      "Everything in Artist Profile",
+      "Booking inquiry management",
+      "Press kit hosting",
+      "Event promotion",
+      "Monthly reporting",
+    ],
+  },
+  {
+    n: 3,
+    name: "FULL PROMOTION",
+    price: "$2,500+",
+    description: "Complete package",
+    features: [
+      "Everything in Management",
+      "Press & media outreach",
+      "Content production direction",
+      "Strategic planning",
+      "Quarterly reviews",
+      "Dedicated manager",
+    ],
+  },
+  {
+    n: 4,
+    name: "ENTERPRISE",
+    price: "CUSTOM",
+    description: "For collectives",
+    features: [
+      "Custom everything",
+      "Multi-artist coordination",
+      "Tour planning",
+      "Sponsorship negotiation",
+      "Full service production",
+      "Priority support",
+    ],
+  },
+];

@@ -1,5 +1,7 @@
 import { MediaHeroSection } from "@/components/sections/MediaHeroSection";
-import { MediaShowcaseSection } from "@/components/sections/MediaShowcaseSection";
+import { MediaGenreShowcaseSection } from "@/components/sections/MediaGenreShowcaseSection";
+import { MediaBrandContentSection } from "@/components/sections/MediaBrandContentSection";
+import { MediaPhotoSection } from "@/components/sections/MediaPhotoSection";
 import { MarqueeTicker } from "@/components/layout/MarqueeTicker";
 import { PressKitSection } from "@/components/sections/PressKitSection";
 import { PressCoverageSection } from "@/components/sections/PressCoverageSection";
@@ -23,7 +25,9 @@ export default function MediaPage() {
   return (
     <main className="flex flex-1 flex-col">
       <MediaHeroSection />
-      <MediaShowcaseSection />
+      <MediaGenreShowcaseSection />
+      <MediaBrandContentSection />
+      <MediaPhotoSection />
       <MarqueeTicker artistNames={marqueeArtistNames} tags={mediaTags} />
       <PressKitSection />
       <PressCoverageSection />
