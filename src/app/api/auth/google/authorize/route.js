@@ -35,6 +35,6 @@ export async function GET() {
     return NextResponse.redirect(authUrl);
   } catch (error) {
     console.error('[GET /api/auth/google/authorize] Error:', error);
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/login?error=auth_failed`);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/?error=auth_failed`);
   }
 }

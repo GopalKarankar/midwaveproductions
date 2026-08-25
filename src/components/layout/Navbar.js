@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { GoogleSignInButton } from "@/components/ui/GoogleSignInButton";
 import { MobileMenu } from "@/components/layout/MobileMenu";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 export function Navbar() {
   return (
@@ -26,7 +26,7 @@ export function Navbar() {
       <div className="flex items-center gap-3">
         <MobileMenu />
         <div className="hidden min-[489px]:inline-flex">
-          <GoogleSignInButton />
+          <UserMenu />
         </div>
       </div>
     </header>

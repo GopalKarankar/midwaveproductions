@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SectionNumber } from "@/components/ui/SectionNumber";
+import { SignOutButton } from "@/components/layout/SignOutButton";
 
 export function DashboardSidebar({ userRole }) {
   const sidebarItems = [
@@ -30,12 +31,7 @@ export function DashboardSidebar({ userRole }) {
       </nav>
 
       <div className="mt-auto">
-        <Link
-          href="/api/auth/logout"
-          className="text-xs font-mono tracking-widest uppercase text-error hover:text-accent-hover transition-colors"
-        >
-          Logout
-        </Link>
+        <SignOutButton />
       </div>
     </aside>
   );

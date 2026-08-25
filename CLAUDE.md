@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Site:** midwaveproductions.com — Full-fledged Artist Management & Promotion Platform
 **Language:** JavaScript only (no TypeScript)
-**Stack:** Next.js (App Router) · Supabase · MongoDB · Framer Motion · Tailwind CSS v4 · Google OAuth
+**Stack:** Next.js (App Router) · Supabase · MongoDB · Framer Motion · Tailwind CSS v4
 
 Source lives under `src/`. No `tailwind.config.js` — Tailwind v4 is CSS-first, tokens live in `@theme` block in `globals.css`.
 
@@ -31,7 +31,6 @@ Source lives under `src/`. No `tailwind.config.js` — Tailwind v4 is CSS-first,
 | Layer | Technology |
 |---|---|
 | Framework | Next.js 14+ (App Router, JS only) |
-| Auth | Custom Google OAuth (authorization-code flow, httpOnly cookies) — identity/roles in MongoDB |
 | Primary DB | MongoDB (Mongoose) — user identity/roles, artist profiles, media metadata, bookings |
 | File Storage | Supabase Storage (binary files: images, video, audio, documents/press kits) |
 | Styling | Tailwind CSS v4 (`@theme` in globals.css, no config file) |
@@ -110,7 +109,6 @@ Dual-row marquee ticker at section transitions — row 1 scrolls left (artist na
 src/
 ├── app/
 │   ├── (public)/            # page.js, artists/, services/, media/, booking/, about/
-│   ├── (auth)/               # login/, auth/callback/
 │   ├── dashboard/            # role-guarded: redirects admins to /admin
 │   ├── admin/                # role-guarded: admin-only, full CRUD
 │   └── api/                  # artists/, bookings/, contact/, media/upload/, users/[id]/role/
@@ -148,27 +146,19 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key  # server-only — never NEXT_PU
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname
 MONGODB_DB=midwaveproductions
 
-# App — Site URL and Google OAuth
+# App — Site URL
 NEXT_PUBLIC_SITE_URL=https://midwaveproductions.com
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_oauth_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
 
 # Email — Resend API for transactional emails
 RESEND_API_KEY=your_resend_api_key
 CONTACT_EMAIL_TO=contact@midwaveproductions.com
 
-# Auth — Role assignment on login
-ADMIN_EMAILS=comma-separated-admin-emails@example.com
-
 # Security & Webhooks
-SESSION_JWT_SECRET=generate_random_string_for_production
 CRON_SECRET=your_cron_secret_token
 ```
 
 **Security rules:**
 - `SUPABASE_SERVICE_ROLE_KEY` may only be imported in `lib/supabase/admin.js`, server-side only
-- `GOOGLE_CLIENT_SECRET` is server-side only — never expose to the browser
-- `ADMIN_EMAILS` — comma-separated list; users with these Google emails are granted `ROLES.ADMIN` on first login, others default to `ROLES.USER`
 - Never commit real credentials — use `.env.local` (gitignored)
 - All `NEXT_PUBLIC_*` vars are exposed to the browser; only use for non-sensitive config
 - Rotate secrets immediately if accidentally committed to version control
@@ -196,24 +186,13 @@ CRON_SECRET=your_cron_secret_token
    - Create a Supabase project at supabase.com for media file Storage
    - Grab the project URL, anon key, and service-role key for `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`
 
-5. **Google OAuth:**
-   - Set up a Google Cloud project and OAuth consent screen
-   - Create OAuth 2.0 credentials (Web app), configure authorized redirect URIs to include `http://localhost:3000/auth/callback`
-   - Grab the client ID and client secret for `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
-
-6. **Start dev server:**
+5. **Start dev server:**
    ```bash
    npm run dev
    ```
    Open http://localhost:3000 — you should see the homepage.
 
-7. **Test auth:**
-   - click "SIGN IN WITH GOOGLE"
-   - OAuth redirects to Google, then back to http://localhost:3000/auth/callback, which exchanges the code and stores user in MongoDB's `users` collection
-   - Check MongoDB: a new document with `googleId`, `email`, `name`, `picture`, and `role` should appear
-   - First login as an email in `ADMIN_EMAILS` creates a user with `role: 'admin'`, all others default to `role: 'user'`
-
-8. **Test file uploads:**
+6. **Test file uploads:**
    - As a logged-in user, upload test files via admin panel → Media
    
 
@@ -223,7 +202,7 @@ CRON_SECRET=your_cron_secret_token
 
 ### MongoDB (Mongoose) — Identity, Roles, Content & Business Data
 
-**`User`** — `googleId` (unique, indexed), `email` (unique, lowercase), `name`, `picture`, `role` (enum `user`|`artist`|`manager`|`admin`, default `user`). Created on first Google login; role is determined by `ADMIN_EMAILS` env var at insertion time only. Timestamps on.
+**`User`** — `email` (unique, lowercase), `name`, `picture`, `role` (enum `user`|`artist`|`manager`|`admin`, default `user`). Timestamps on.
 
 **`Artist`** — `ownerId` (MongoDB `User._id`, unique, indexed), `slug` (unique), `stageName`, `realName`, `bio`, `shortBio`, `genres[]`, `socialLinks{}`, `profileImage`, `coverImage`, `pressKit`, `featuredTracks[]` (title/url/platform), `upcomingEvents[]` (title/date/venue/city/ticketUrl), `isPublished`, `isFeatured`, `managedBy`. Timestamps on.
 
@@ -257,59 +236,7 @@ export function hasRole(userRole, requiredRole) {
 
 ---
 
-## Auth & Session Management
-
-### Simple Login Flow
-
-1. **User clicks "SIGN IN WITH GOOGLE"** — `GoogleSignInButton` component (`src/components/ui/GoogleSignInButton.js`) is a plain link (no client JS)
-2. **Authorize endpoint generates state & redirects** — `GET /api/auth/google/authorize` generates a random `state` UUID for CSRF protection, stores it in a short-lived httpOnly `oauth_state` cookie (10-minute expiry), appends `state` to the Google OAuth URL, and issues `NextResponse.redirect()` straight to Google's consent screen (no JSON intermediate)
-3. **Google redirects back with code** — returns to `GET /auth/callback?code=...&state=...`
-4. **Single callback route does all the work** — `/auth/callback`:
-   - Validates `state` against the `oauth_state` cookie (CSRF check), deletes that cookie (single-use)
-   - Exchanges `code` for tokens via Google's token endpoint using the confidential client secret
-   - Fetches the user profile from Google's userinfo endpoint
-   - Connects to MongoDB and upserts the user into the `users` collection via `User.findOneAndUpdate(..., { upsert: true })`
-   - **Role assignment (first login only):** On insert, sets `role = ROLES.ADMIN` if the email is in `ADMIN_EMAILS` (env var), otherwise `role = ROLES.USER`. Existing users keep their current role.
-5. **Set signed session cookie** — mints a signed JWT via `jose` (HS256, key from `SESSION_JWT_SECRET`) containing `{ sub: <Mongo _id>, iat, exp }`, and stores it as the single httpOnly `mw_session` cookie (7-day expiry, matching the JWT's `exp` claim). Replaces the old unsigned Google cookies.
-6. **Redirect to dashboard** — redirects to `/dashboard` on success, or `/login?error=...` on any failure (state validation, token exchange, user fetch, DB write)
-
-### Role-Based Redirect & Dashboard Layout
-
-**`/dashboard` layout** (`src/app/dashboard/layout.js`):
-- Checks for active session (else redirects to `/login`)
-- **If user is `admin`:** immediately redirects to `/admin`
-- **Otherwise:** renders the dashboard with role-specific sidebar + panel
-
-**`/admin` layout** (`src/app/admin/layout.js`):
-- Checks for active session **and** requires `role === 'admin'` (else redirects to `/dashboard`)
-- Renders admin sidebar with full CRUD pages
-
-### Session & Role-Checking Utilities
-
-- `lib/auth/session.js` — JWT signing/verification helpers using `jose`, key derived from `SESSION_JWT_SECRET`. Exports `signSessionToken(payload)` and `verifySessionToken(token)`.
-- `lib/auth/getSession.js` — reads and verifies the signed `mw_session` JWT cookie (any signature/expiry error returns `null`), extracts the Mongo user id from the JWT's `sub` claim, and **always re-fetches the user from MongoDB** to get the current `role` (deliberate: role changes via `PATCH /api/users/[id]/role` take effect immediately rather than waiting out the 7-day token lifetime). Returns `{ session: { user: { id, email, name, picture } }, profile: { role } }` on success, or `{ session: null, profile: null }` on any failure.
-- `lib/auth/requireRole.js` — calls `getSession()` → compares `profile.role` against `ROLE_HIERARCHY` → returns `{ error: NextResponse(401|403), session, profile }` or `{ error: null, session, profile }`
-- **Every API route** calls `requireRole()` at the correct tier — checks are not delegated to middleware
-- **CSRF protection:** OAuth `state` is a random UUID generated in `/api/auth/google/authorize`, stored as an httpOnly cookie, and validated on callback against the query parameter — standard double-submit pattern, safe from cross-origin forging since httpOnly cookies cannot be read or set cross-origin
-
-### Dashboard & Admin CRUD Privileges by Role
-
-| Role | Lands On | Component | CRUD Privileges |
-|---|---|---|---|
-| `user` | `/dashboard` | `DashboardUserPanel` | Read-only — no artist/booking management |
-| `artist` | `/dashboard` | `DashboardArtistPanel` | Create/Read/Update own `Artist` profile only; no Delete |
-| `manager` | `/dashboard` | `DashboardManagerPanel` | Read assigned artists + their bookings; cannot Create/Update/Delete |
-| `admin` | `/admin` | `AdminSidebar` + pages | Full CRUD: Artists (toggle publish/featured), Bookings (status), Users (role dropdown), Media (Storage browser) |
-
-**Role changes:** admin-only via `PATCH /api/users/[id]/role` — server validates role against `ROLES` enum before write.
-
-**Logout:** `/api/auth/logout` deletes httpOnly cookies
-
-### Google Login Data Storage Rule
-
-**Google login details (`googleId`, `email`, `name`, `picture`, `role`) are stored in MongoDB via the `User` model — never in Supabase.** This is the single source of truth for user identity and roles. Supabase remains in use only for Storage (media file uploads). If you need to store additional user metadata, add it to the `User` schema in MongoDB, never to a Supabase `profiles` table.
-
-### Media Storage Split Rule
+## Media Storage Split Rule
 
 **MongoDB stores metadata/details only; Supabase Storage stores all binary files.** Specifically:
 - MongoDB holds all `MediaAsset` records (text fields: `type`, `url`, `storagePath`, `filename`, `size`, `mimeType`, `label`, `artistId`, `uploadedBy`) — the *reference* to a file, not the file itself.
@@ -383,12 +310,10 @@ Logo + numbered social links (`1. EMAIL ↗`, etc.) + copyright + `V#001` versio
 - [ ] If real credentials ever leaked to version control: rotate them immediately in all environments
 - [ ] All admin API routes guarded by `requireRole('admin')`
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` never imported outside `lib/supabase/admin.js`
-- [ ] `GOOGLE_CLIENT_SECRET` is server-side only, never exposed to browser via `NEXT_PUBLIC_` prefix
 - [ ] MongoDB responses always `.select()`-whitelisted in public routes
 - [ ] All user text trimmed/sanitized before DB write
 - [ ] Upload route validates MIME + size before Storage write; never store raw file bytes in MongoDB
 - [ ] Booking/contact forms re-validated server-side regardless of client validation
-- [ ] `ADMIN_EMAILS` roles assigned at MongoDB write time, never mutable via client
 - [ ] CSP headers set in `next.config.mjs` (allow Spotify/YouTube/SoundCloud iframes)
 - [ ] Rate limiting on `/api/contact`, `/api/bookings`
 - [ ] `.env.local` gitignored; `.env.example` committed with placeholders only
@@ -465,9 +390,9 @@ Currently a minimal stub. Should be expanded for production to include:
 
 ## Deployment (Vercel)
 
-**Pre-deploy:** clean `npm run build`, all env vars set per environment (Production/Preview/Development use **separate** Supabase projects + MongoDB clusters — never point Preview at prod data), Supabase redirect URLs include production domain, MongoDB Atlas IP allowlist set to `0.0.0.0/0` (Vercel has no fixed IP range).
+**Pre-deploy:** clean `npm run build`, all env vars set per environment (Production/Preview/Development use **separate** Supabase projects + MongoDB clusters — never point Preview at prod data), MongoDB Atlas IP allowlist set to `0.0.0.0/0` (Vercel has no fixed IP range).
 
-**Flow:** `vercel link` → set env vars in dashboard (per-environment table, not CLI) → `vercel --prod` → add custom domain (Vercel-managed nameservers recommended for auto-SSL) → update Supabase `Site URL` + redirect URLs to production domain (OAuth silently fails without this) → verify full flow manually (login, artist roster loads, booking submits + emails, admin role changes, uploads).
+**Flow:** `vercel link` → set env vars in dashboard (per-environment table, not CLI) → `vercel --prod` → add custom domain (Vercel-managed nameservers recommended for auto-SSL) → verify full flow manually (artist roster loads, booking submits + emails, admin role changes, uploads).
 
 **Git integration:** connect repo → `main` = production, `dev`/`feature/*` = Preview deploys with isolated DB/Supabase resources.
 

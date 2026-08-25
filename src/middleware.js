@@ -14,7 +14,7 @@ const ACCESS_COOKIE_OPTIONS = {
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
-  const isProtectedPage = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
+  const isProtectedPage = pathname.startsWith('/dashboard');
 
   const accessToken = request.cookies.get(ACCESS_COOKIE)?.value;
   const accessPayload = accessToken ? await verifyAccessToken(accessToken) : null;
@@ -58,5 +58,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/admin/:path*', '/api/:path*'],
+  matcher: ['/dashboard/:path*', '/api/:path*'],
 };

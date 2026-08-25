@@ -6,6 +6,9 @@ import { ROLES } from "@/constants/roles";
 import { signAccessToken, signRefreshToken } from "@/lib/auth/session";
 
 export async function GET(request) {
+
+  // console.log("request : ",request);
+
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
@@ -13,15 +16,17 @@ export async function GET(request) {
 
   const cookieStore = await cookies();
 
+  // console.log("cookieStore : ",cookieStore);
+
   // Handle error from Google
   if (error) {
     console.error('[GET /auth/callback] Google OAuth error:', error);
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+    return NextResponse.redirect(`${origin}/?error=auth_failed`);
   }
 
   if (!code || !state) {
     console.error('[GET /auth/callback] Missing code or state');
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+    return NextResponse.redirect(`${origin}/?error=auth_failed`);
   }
 
   try {
@@ -31,7 +36,7 @@ export async function GET(request) {
     if (!oauthState || oauthState !== state) {
       console.error('[GET /auth/callback] CSRF state mismatch');
       cookieStore.delete("oauth_state");
-      return NextResponse.redirect(`${origin}/login?error=invalid_state`);
+      return NextResponse.redirect(`${origin}/?error=invalid_state`);
     }
 
     // Delete state cookie (single-use)
@@ -58,7 +63,7 @@ export async function GET(request) {
       const error = await tokenResponse.json();
       console.error('[GET /auth/callback] Token exchange failed:', error);
       return NextResponse.redirect(
-        `${origin}/login?error=token_exchange_failed`
+        `${origin}/?error=token_exchange_failed`
       );
     }
 
@@ -71,21 +76,13 @@ export async function GET(request) {
 
     if (!userResponse.ok) {
       console.error('[GET /auth/callback] User info fetch failed');
-      return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+      return NextResponse.redirect(`${origin}/?error=auth_failed`);
     }
 
     const googleUser = await userResponse.json();
 
     // Create or update user in MongoDB
     await dbConnect();
-
-    // Determine role: admin if email matches ADMIN_EMAILS, otherwise user
-    const adminEmails = (process.env.ADMIN_EMAILS || "")
-      .split(",")
-      .map((e) => e.trim().toLowerCase());
-    const role = adminEmails.includes(googleUser.email.toLowerCase())
-      ? ROLES.ADMIN
-      : ROLES.USER;
 
     const user = await User.findOneAndUpdate(
       { googleId: googleUser.id },
@@ -95,7 +92,7 @@ export async function GET(request) {
           name: googleUser.name,
           picture: googleUser.picture,
         },
-        $setOnInsert: { role },
+        $setOnInsert: { role: ROLES.USER },
       },
       { upsert: true, new: true }
     );
@@ -124,6 +121,6 @@ export async function GET(request) {
     return NextResponse.redirect(`${origin}/dashboard`);
   } catch (err) {
     console.error('[GET /auth/callback] Error:', err);
-    return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+    return NextResponse.redirect(`${origin}/?error=auth_failed`);
   }
 }

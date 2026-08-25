@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { SectionNumber } from "@/components/ui/SectionNumber";
+import { SignOutButton } from "@/components/layout/SignOutButton";
 
 export function AdminSidebar() {
   const adminItems = [
-    { n: 1, label: "Overview", href: "/admin" },
-    { n: 2, label: "Artists", href: "/admin/artists" },
-    { n: 3, label: "Bookings", href: "/admin/bookings" },
-    { n: 4, label: "Users", href: "/admin/users" },
-    { n: 5, label: "Media", href: "/admin/media" },
+    { n: 1, label: "Overview", href: "/dashboard" },
+    { n: 2, label: "Artists", href: "/dashboard/artists" },
+    { n: 3, label: "Bookings", href: "/dashboard/bookings" },
+    { n: 4, label: "Users", href: "/dashboard/users" },
+    { n: 5, label: "Media", href: "/dashboard/media" },
   ];
 
   return (
     <aside className="w-48 border-r border-border bg-surface p-6 flex flex-col gap-8 sticky top-0 h-svh overflow-y-auto">
-      <Link href="/admin" className="block">
+      <Link href="/dashboard" className="block">
         <h1 className="font-display uppercase text-sm tracking-display text-highlight hover:text-accent transition-colors">
           ADMIN PANEL
         </h1>
@@ -32,12 +33,7 @@ export function AdminSidebar() {
       </nav>
 
       <div className="mt-auto">
-        <Link
-          href="/api/auth/logout"
-          className="text-xs font-mono tracking-widest uppercase text-error hover:text-accent-hover transition-colors"
-        >
-          Logout
-        </Link>
+        <SignOutButton />
       </div>
     </aside>
   );

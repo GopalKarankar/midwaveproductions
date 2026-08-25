@@ -8,7 +8,7 @@ import { SectionNumber } from "@/components/ui/SectionNumber";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { HorizontalDragCarousel } from "@/components/ui/HorizontalDragCarousel";
 import { VersionLabel } from "@/components/ui/VersionLabel";
-import { GoogleSignInButton } from "@/components/ui/GoogleSignInButton";
+import { UserMenu } from "@/components/layout/UserMenu";
 import { useReducedMotionVariants } from "@/hooks/useReducedMotion";
 
 const staggerContainer = {
@@ -125,10 +125,7 @@ export function MobileMenu() {
                     NAVIGATION
                   </h2>
                   <div className="mb-8 min-[489px]:hidden">
-                    <GoogleSignInButton
-                      label="SIGN IN"
-                      className="w-full justify-center border-accent"
-                    />
+                    <UserMenu className="w-full justify-center border-accent" />
                   </div>
                   <ul className="space-y-0">
                     {/* Home link */}
