@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth/getSession";
 import dbConnect from "@/lib/mongodb/connect";
 import User from "@/lib/mongodb/models/User";
 import { SectionNumber } from "@/components/ui/SectionNumber";
@@ -9,6 +10,7 @@ export const metadata = {
 };
 
 export default async function AdminUsersPage() {
+  const { session } = await getSession();
   await dbConnect();
   const users = await User.find()
     .select("email name picture role createdAt")
@@ -22,7 +24,7 @@ export default async function AdminUsersPage() {
         <SectionHeading className="!text-3xl">Users</SectionHeading>
       </div>
 
-      <UsersAdminTable users={users} />
+      <UsersAdminTable users={users} currentUserId={session?.user?.id} />
     </div>
   );
 }

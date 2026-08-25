@@ -18,15 +18,26 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });
     }
     await dbConnect();
+    const user = await User.findById(id);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (user.role === "admin" && role !== "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+      if (adminCount <= 1) {
+        return NextResponse.json(
+          { error: "Cannot remove the last remaining admin." },
+          { status: 400 }
+        );
+      }
+    }
+
     const updated = await User.findByIdAndUpdate(
       id,
       { role, updatedAt: new Date() },
       { new: true }
     );
-
-    if (!updated) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -4,21 +4,32 @@ import { useState } from "react";
 
 export function ArtistsAdminTable({ artists }) {
   const [localArtists, setLocalArtists] = useState(artists);
-  const [isLoading, setIsLoading] = useState(false);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [errorId, setErrorId] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const toggleField = async (artistId, field) => {
-    setIsLoading(true);
-    try {
-      const artist = localArtists.find((a) => a._id.toString() === artistId);
-      const newValue = !artist[field];
+    const artist = localArtists.find((a) => a._id.toString() === artistId);
+    const newValue = !artist[field];
 
+    setUpdatingId(artistId);
+    setErrorId(null);
+    setErrorMessage("");
+
+    try {
       const response = await fetch(`/api/artists/${artistId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ [field]: newValue }),
       });
 
-      if (!response.ok) throw new Error("Failed to update");
+      if (!response.ok) {
+        const data = await response.json();
+        setErrorId(artistId);
+        setErrorMessage(data.error || "Failed to update");
+        return;
+      }
 
       setLocalArtists((prev) =>
         prev.map((a) =>
@@ -27,65 +38,95 @@ export function ArtistsAdminTable({ artists }) {
       );
     } catch (err) {
       console.error("Error updating artist:", err);
+      setErrorId(artistId);
+      setErrorMessage("Failed to update");
     } finally {
-      setIsLoading(false);
+      setUpdatingId(null);
     }
   };
 
+  const filteredArtists = localArtists.filter((artist) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      artist.stageName.toLowerCase().includes(query) ||
+      (artist.genres && artist.genres.some((g) => g.toLowerCase().includes(query)))
+    );
+  });
+
   return (
-    <div className="overflow-x-auto border border-border">
-      <table className="w-full text-sm">
-        <thead className="border-b border-border bg-surface">
-          <tr>
-            <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-              Stage Name
-            </th>
-            <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-              Genres
-            </th>
-            <th className="text-center px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-              Published
-            </th>
-            <th className="text-center px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-              Featured
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {localArtists.map((artist) => (
-            <tr key={artist._id} className="border-t border-border hover:bg-surface-2 transition-colors">
-              <td className="px-4 py-3 font-body text-highlight">{artist.stageName}</td>
-              <td className="px-4 py-3 font-body text-muted text-xs">
-                {artist.genres?.join(", ") || "—"}
-              </td>
-              <td className="px-4 py-3 text-center">
-                <button
-                  onClick={() => toggleField(artist._id.toString(), "isPublished")}
-                  disabled={isLoading}
-                  className={`w-6 h-6 border rounded transition-colors ${
-                    artist.isPublished
-                      ? "bg-success border-success"
-                      : "border-border hover:border-accent"
-                  }`}
-                  title={artist.isPublished ? "Published" : "Draft"}
-                />
-              </td>
-              <td className="px-4 py-3 text-center">
-                <button
-                  onClick={() => toggleField(artist._id.toString(), "isFeatured")}
-                  disabled={isLoading}
-                  className={`w-6 h-6 border rounded transition-colors ${
-                    artist.isFeatured
-                      ? "bg-accent-2 border-accent-2"
-                      : "border-border hover:border-accent"
-                  }`}
-                  title={artist.isFeatured ? "Featured" : "Not featured"}
-                />
-              </td>
+    <div className="flex flex-col gap-4">
+      <input
+        type="text"
+        placeholder="Search by name or genre..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="max-w-md bg-transparent border-b border-border px-0 py-2 text-sm font-body text-highlight placeholder-muted focus:outline-none focus:border-accent transition-colors"
+      />
+
+      {errorMessage && (
+        <p className="font-mono text-xs text-error tracking-widest uppercase">
+          {errorMessage}
+        </p>
+      )}
+
+      <div className="overflow-x-auto border border-border">
+        <table className="w-full text-sm">
+          <thead className="border-b border-border bg-surface">
+            <tr>
+              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
+                Stage Name
+              </th>
+              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
+                Genres
+              </th>
+              <th className="text-center px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
+                Published
+              </th>
+              <th className="text-center px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
+                Featured
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filteredArtists.map((artist) => (
+              <tr key={artist._id} className="border-t border-border hover:bg-surface-2 transition-colors">
+                <td className="px-4 py-3 font-body text-highlight">{artist.stageName}</td>
+                <td className="px-4 py-3 font-body text-muted text-xs">
+                  {artist.genres?.join(", ") || "—"}
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <button
+                    onClick={() => toggleField(artist._id.toString(), "isPublished")}
+                    disabled={updatingId === artist._id.toString()}
+                    className={`w-6 h-6 border rounded transition-colors disabled:opacity-50 ${
+                      artist.isPublished
+                        ? "bg-success border-success"
+                        : "border-border hover:border-accent"
+                    }`}
+                    title={artist.isPublished ? "Published" : "Draft"}
+                  />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <button
+                    onClick={() => toggleField(artist._id.toString(), "isFeatured")}
+                    disabled={updatingId === artist._id.toString()}
+                    className={`w-6 h-6 border rounded transition-colors disabled:opacity-50 ${
+                      artist.isFeatured
+                        ? "bg-accent-2 border-accent-2"
+                        : "border-border hover:border-accent"
+                    }`}
+                    title={artist.isFeatured ? "Featured" : "Not featured"}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {filteredArtists.length === 0 && (
+        <p className="font-body text-muted text-center py-8">No artists found.</p>
+      )}
     </div>
   );
 }
