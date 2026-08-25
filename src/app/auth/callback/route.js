@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import dbConnect from "@/lib/mongodb/connect";
 import User from "@/lib/mongodb/models/User";
 import { ROLES } from "@/constants/roles";
-import { signSessionToken } from "@/lib/auth/session";
+import { signAccessToken, signRefreshToken } from "@/lib/auth/session";
 
 export async function GET(request) {
   const { searchParams, origin } = new URL(request.url);
@@ -100,20 +100,25 @@ export async function GET(request) {
       { upsert: true, new: true }
     );
 
-    // Sign and set session cookie
-    const sessionToken = await signSessionToken({
-      sub: user._id.toString(),
-    });
+    // Sign and set access + refresh token cookies
+    const accessToken = await signAccessToken({ sub: user._id.toString() });
+    const refreshToken = await signRefreshToken({ sub: user._id.toString() });
 
-    const cookieOptions = {
+    const baseCookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
       path: "/",
     };
 
-    cookieStore.set("mw_session", sessionToken, cookieOptions);
+    cookieStore.set("mw_access", accessToken, {
+      ...baseCookieOptions,
+      maxAge: 60 * 60, // 1 hour
+    });
+    cookieStore.set("mw_refresh", refreshToken, {
+      ...baseCookieOptions,
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
 
     // Redirect to dashboard on successful authentication
     return NextResponse.redirect(`${origin}/dashboard`);

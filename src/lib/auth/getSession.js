@@ -1,20 +1,23 @@
 import { cookies } from "next/headers";
 import dbConnect from "@/lib/mongodb/connect";
 import User from "@/lib/mongodb/models/User";
-import { verifySessionToken } from "@/lib/auth/session";
+import { verifyAccessToken } from "@/lib/auth/session";
 
 // Server-side session + profile lookup for Route Handlers / Server Components.
-// Reads and verifies the signed mw_session JWT, then looks up the user in MongoDB.
+// By the time this runs, middleware has already verified/refreshed the access
+// token cookie for matched routes (/dashboard, /admin, /api/*) — this only
+// needs to trust and verify the (already-fresh) access token, then look up
+// the user's current role/profile in MongoDB.
 export async function getSession() {
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get("mw_session")?.value;
+  const accessToken = cookieStore.get("mw_access")?.value;
 
-  if (!sessionToken) {
+  if (!accessToken) {
     return { session: null, profile: null };
   }
 
   try {
-    const payload = await verifySessionToken(sessionToken);
+    const payload = await verifyAccessToken(accessToken);
 
     if (!payload || !payload.sub) {
       return { session: null, profile: null };

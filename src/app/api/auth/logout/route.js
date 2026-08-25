@@ -5,8 +5,10 @@ export async function POST() {
   try {
     const cookieStore = await cookies();
 
-    // Clear session cookies
-    cookieStore.delete('mw_session');
+    // Clear session cookies (and any stale pre-migration cookie)
+    cookieStore.delete('mw_access');
+    cookieStore.delete('mw_refresh');
+    cookieStore.delete('mw_session'); // defensive: clear legacy cookie if still present
     cookieStore.delete('oauth_state');
 
     return NextResponse.json({ success: true });
