@@ -85,9 +85,10 @@ export async function GET(request) {
     await dbConnect();
 
     const user = await User.findOneAndUpdate(
-      { googleId: googleUser.id },
+      { $or: [{ googleId: googleUser.id }, { email: googleUser.email.toLowerCase() }] },
       {
         $set: {
+          googleId: googleUser.id,
           email: googleUser.email,
           name: googleUser.name,
           picture: googleUser.picture,
