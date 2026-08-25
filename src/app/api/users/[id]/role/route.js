@@ -10,13 +10,13 @@ export async function PATCH(request, { params }) {
   if (error) return error;
 
   const { id } = await params;
-  const { role } = await request.json();
-
-  if (!Object.values(ROLES).includes(role)) {
-    return NextResponse.json({ error: "Invalid role" }, { status: 400 });
-  }
 
   try {
+    const { role } = await request.json();
+
+    if (!Object.values(ROLES).includes(role)) {
+      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    }
     await dbConnect();
     const updated = await User.findByIdAndUpdate(
       id,

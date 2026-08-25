@@ -11,6 +11,7 @@ const MIME_RULES = {
   "image/jpeg": { type: "image", maxSize: 10 * 1024 * 1024 },
   "image/png": { type: "image", maxSize: 10 * 1024 * 1024 },
   "image/webp": { type: "image", maxSize: 10 * 1024 * 1024 },
+  "image/gif": { type: "image", maxSize: 10 * 1024 * 1024 },
   "audio/mpeg": { type: "audio", maxSize: 50 * 1024 * 1024 },
   "audio/wav": { type: "audio", maxSize: 50 * 1024 * 1024 },
   "video/mp4": { type: "video", maxSize: 200 * 1024 * 1024 },

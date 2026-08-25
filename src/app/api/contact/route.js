@@ -44,7 +44,7 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("[ROUTE /api/contact]", err);
+    console.error("[ROUTE POST /api/contact]", err);
     return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
 }

@@ -3,10 +3,10 @@ import { motion } from "framer-motion";
 import { SectionNumber } from "@/components/ui/SectionNumber";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ArrowLink } from "@/components/ui/ArrowLink";
-import { Button } from "@/components/ui/Button";
 import { staggerContainer, fadeInUp } from "@/lib/motion/variants";
 import { useReducedMotionVariants } from "@/hooks/useReducedMotion";
 import { SITEMAP_ENTRIES } from "@/lib/data/sitemapEntries";
+import { VersionLabel } from "@/components/ui/VersionLabel";
 
 // N°1 — Hero + N°2 Sitemap as split-screen (50/50 desktop, stacked mobile)
 export function HeroSection() {
@@ -16,49 +16,82 @@ export function HeroSection() {
     <section className="relative w-full min-h-svh bg-bg grid grid-cols-1 md:grid-cols-2 gap-8 px-6 md:px-12 py-8">
       {/* Left column — Hero content */}
       <motion.div
-        className="flex flex-col justify-center gap-6 md:gap-8"
+        className="flex flex-col justify-between"
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
       >
-        {/* Eyebrow */}
+        {/* Breadcrumb — top */}
         <motion.p
           variants={reducedFadeInUp}
-          className="font-mono text-xs tracking-widest uppercase text-accent"
+          className="font-mono text-xs tracking-widest text-muted uppercase"
         >
-          ARTIST MANAGEMENT · PROMOTION · BOOKINGS
+          MIDWAVE <span className="text-accent">— Home</span>
         </motion.p>
 
-        {/* Headline — two lines with accent-2 highlight on "ARTISTS" */}
-        <motion.h1
-          variants={reducedFadeInUp}
-          className="font-display text-4xl md:text-6xl lg:text-7xl leading-none tracking-display uppercase text-highlight"
-        >
-          WE MAKE{" "}
-          <span className="text-accent-2">ARTISTS</span>
-          <br />
-          MOVE.
-        </motion.h1>
-
-        {/* Paragraph */}
-        <motion.p
-          variants={reducedFadeInUp}
-          className="font-body text-muted text-sm md:text-base max-w-md"
-        >
-          An artist-run platform handling promotion, bookings, and media production — so the work can move people, not paperwork.
-        </motion.p>
-
-        {/* CTA buttons */}
+        {/* Animated wave-logo + showreel link — center */}
         <motion.div
           variants={reducedFadeInUp}
-          className="flex flex-col sm:flex-row gap-4"
+          className="relative flex items-center justify-center h-40"
         >
-          <Button variant="solid" href="/artists">
-            VIEW OUR ROSTER
-          </Button>
-          <Button variant="outline" href="/booking">
-            START A PROJECT
-          </Button>
+          {/* Decorative concentric circles */}
+          <div className="absolute w-64 h-32 border border-border rounded-full" />
+          <div className="absolute w-56 h-36 border border-border rounded-full -rotate-6" />
+
+          {/* Animated wave path — only if not reducing motion */}
+          {!shouldReduceMotion && (
+            <motion.svg
+              width="28" height="18" viewBox="0 0 28 18"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1.2, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
+            >
+              <path
+                d="M2 2 Q8 2 10 10 Q12 18 18 10 Q20 2 26 2"
+                stroke="currentColor"
+                className="text-accent"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+              />
+            </motion.svg>
+          )}
+
+          {/* "Watch Showreel ↗" link — overlaid right */}
+          <a
+            href="#showreel"
+            className="absolute right-0 font-mono text-xs text-highlight text-right leading-tight
+              hover:text-accent transition-colors duration-200"
+          >
+            Watch<br />Showreel<br /><span className="text-accent">↗</span>
+          </a>
+        </motion.div>
+
+        {/* Tagline + version — bottom-left */}
+        <motion.div variants={reducedFadeInUp}>
+          <p className="font-body font-bold text-text text-sm max-w-xs mb-4">
+            Artist run — management, promotion, bookings and media production.
+          </p>
+          <VersionLabel variant="lg" />
+        </motion.div>
+
+        {/* Wordmark + scroll button — very bottom */}
+        <motion.div variants={reducedFadeInUp}>
+          <div className="border-t border-border mb-4" />
+          <div className="flex items-center justify-between">
+            <div className="font-display text-4xl md:text-5xl text-highlight tracking-widest">
+              MIDWAVE
+            </div>
+            <a
+              href="#showcase"
+              aria-label="Scroll to showcase"
+              className="w-14 h-14 rounded-full border border-border flex items-center justify-center
+                text-highlight hover:border-accent hover:text-accent transition-colors duration-200"
+            >
+              ↓
+            </a>
+          </div>
+          <div className="border-t border-border mt-4" />
         </motion.div>
       </motion.div>
 
@@ -107,6 +140,7 @@ export function HeroSection() {
                   href={href}
                   color={action === "contact" ? "yellow" : "blue"}
                   className="shrink-0"
+                  as="span"
                 >
                   {action}
                 </ArrowLink>

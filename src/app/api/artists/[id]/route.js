@@ -23,7 +23,8 @@ export async function GET(request, { params }) {
     }
 
     return NextResponse.json({ artist });
-  } catch {
+  } catch (err) {
+    console.error("[ROUTE GET /api/artists/[id]]", err);
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 }

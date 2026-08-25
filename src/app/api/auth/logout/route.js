@@ -5,10 +5,9 @@ export async function POST() {
   try {
     const cookieStore = await cookies();
 
-    // Clear authentication cookies
-    cookieStore.delete('google_access_token');
-    cookieStore.delete('google_id_token');
-    cookieStore.delete('google_user_id');
+    // Clear session cookies
+    cookieStore.delete('mw_session');
+    cookieStore.delete('oauth_state');
 
     return NextResponse.json({ success: true });
   } catch (error) {

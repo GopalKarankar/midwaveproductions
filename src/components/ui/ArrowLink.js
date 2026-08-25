@@ -14,13 +14,15 @@ export function ArrowLink({
   direction = "↗",
   className = "",
   color = "blue",
+  as = "a",
 }) {
-  return (
-    <a
-      href={href}
-      className={`font-mono text-xs ${COLORS[color]} tracking-widest uppercase transition-colors duration-200 ${className}`}
-    >
-      {children} {direction}
-    </a>
-  );
+  const Element = as;
+  const props = {
+    className: `font-mono text-xs ${COLORS[color]} tracking-widest uppercase transition-colors duration-200 ${className}`,
+    children: `${children} ${direction}`,
+  };
+  if (as === "a") {
+    props.href = href;
+  }
+  return <Element {...props} />;
 }

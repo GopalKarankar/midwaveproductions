@@ -111,7 +111,8 @@ src/
 ├── app/
 │   ├── (public)/            # page.js, artists/, services/, media/, booking/, about/
 │   ├── (auth)/               # login/, auth/callback/
-│   ├── (dashboard)/          # dashboard/, admin/ (role-guarded layout)
+│   ├── dashboard/            # role-guarded: redirects admins to /admin
+│   ├── admin/                # role-guarded: admin-only, full CRUD
 │   └── api/                  # artists/, bookings/, contact/, media/upload/, users/[id]/role/
 ├── components/
 │   ├── ui/                   # ArrowLink, Badge, SectionNumber, SectionHeading, FormField, VersionLabel
@@ -258,22 +259,51 @@ export function hasRole(userRole, requiredRole) {
 
 ## Auth & Session Management
 
-**Google OAuth flow:**
-1. User clicks "SIGN IN WITH GOOGLE" in navbar (`GoogleSignInButton`)
-2. Redirects to `/api/auth/google/authorize` → Google's auth endpoint
-3. Google redirects back to `/auth/callback` with authorization `code`
-4. `/auth/callback` POSTs code to `/api/auth/google/callback`
-5. Backend exchanges code for tokens, fetches user info from Google
-6. User record created/updated in MongoDB's `users` collection (role = `ROLES.ADMIN` if email matches `ADMIN_EMAILS`, else `ROLES.USER`)
-7. httpOnly cookies set: `google_access_token`, `google_id_token`, `google_user_id` (the Google ID)
-8. Redirect to `/dashboard` on success
+### Simple Login Flow
 
-**Session & role-checking:**
-- `lib/auth/getSession.js` — fetches httpOnly `google_user_id` cookie → looks up user in MongoDB `users` collection → returns `{ session: { user: { id, email, name, picture } }, profile: { role } }`
+1. **User clicks "SIGN IN WITH GOOGLE"** — `GoogleSignInButton` component (`src/components/ui/GoogleSignInButton.js`) is a plain link (no client JS)
+2. **Authorize endpoint generates state & redirects** — `GET /api/auth/google/authorize` generates a random `state` UUID for CSRF protection, stores it in a short-lived httpOnly `oauth_state` cookie (10-minute expiry), appends `state` to the Google OAuth URL, and issues `NextResponse.redirect()` straight to Google's consent screen (no JSON intermediate)
+3. **Google redirects back with code** — returns to `GET /auth/callback?code=...&state=...`
+4. **Single callback route does all the work** — `/auth/callback`:
+   - Validates `state` against the `oauth_state` cookie (CSRF check), deletes that cookie (single-use)
+   - Exchanges `code` for tokens via Google's token endpoint using the confidential client secret
+   - Fetches the user profile from Google's userinfo endpoint
+   - Connects to MongoDB and upserts the user into the `users` collection via `User.findOneAndUpdate(..., { upsert: true })`
+   - **Role assignment (first login only):** On insert, sets `role = ROLES.ADMIN` if the email is in `ADMIN_EMAILS` (env var), otherwise `role = ROLES.USER`. Existing users keep their current role.
+5. **Set signed session cookie** — mints a signed JWT via `jose` (HS256, key from `SESSION_JWT_SECRET`) containing `{ sub: <Mongo _id>, iat, exp }`, and stores it as the single httpOnly `mw_session` cookie (7-day expiry, matching the JWT's `exp` claim). Replaces the old unsigned Google cookies.
+6. **Redirect to dashboard** — redirects to `/dashboard` on success, or `/login?error=...` on any failure (state validation, token exchange, user fetch, DB write)
+
+### Role-Based Redirect & Dashboard Layout
+
+**`/dashboard` layout** (`src/app/dashboard/layout.js`):
+- Checks for active session (else redirects to `/login`)
+- **If user is `admin`:** immediately redirects to `/admin`
+- **Otherwise:** renders the dashboard with role-specific sidebar + panel
+
+**`/admin` layout** (`src/app/admin/layout.js`):
+- Checks for active session **and** requires `role === 'admin'` (else redirects to `/dashboard`)
+- Renders admin sidebar with full CRUD pages
+
+### Session & Role-Checking Utilities
+
+- `lib/auth/session.js` — JWT signing/verification helpers using `jose`, key derived from `SESSION_JWT_SECRET`. Exports `signSessionToken(payload)` and `verifySessionToken(token)`.
+- `lib/auth/getSession.js` — reads and verifies the signed `mw_session` JWT cookie (any signature/expiry error returns `null`), extracts the Mongo user id from the JWT's `sub` claim, and **always re-fetches the user from MongoDB** to get the current `role` (deliberate: role changes via `PATCH /api/users/[id]/role` take effect immediately rather than waiting out the 7-day token lifetime). Returns `{ session: { user: { id, email, name, picture } }, profile: { role } }` on success, or `{ session: null, profile: null }` on any failure.
 - `lib/auth/requireRole.js` — calls `getSession()` → compares `profile.role` against `ROLE_HIERARCHY` → returns `{ error: NextResponse(401|403), session, profile }` or `{ error: null, session, profile }`
 - **Every API route** calls `requireRole()` at the correct tier — checks are not delegated to middleware
+- **CSRF protection:** OAuth `state` is a random UUID generated in `/api/auth/google/authorize`, stored as an httpOnly cookie, and validated on callback against the query parameter — standard double-submit pattern, safe from cross-origin forging since httpOnly cookies cannot be read or set cross-origin
 
-**Logout:** `/api/auth/logout` deletes httpOnly cookies (`google_access_token`, `google_id_token`, `google_user_id`)
+### Dashboard & Admin CRUD Privileges by Role
+
+| Role | Lands On | Component | CRUD Privileges |
+|---|---|---|---|
+| `user` | `/dashboard` | `DashboardUserPanel` | Read-only — no artist/booking management |
+| `artist` | `/dashboard` | `DashboardArtistPanel` | Create/Read/Update own `Artist` profile only; no Delete |
+| `manager` | `/dashboard` | `DashboardManagerPanel` | Read assigned artists + their bookings; cannot Create/Update/Delete |
+| `admin` | `/admin` | `AdminSidebar` + pages | Full CRUD: Artists (toggle publish/featured), Bookings (status), Users (role dropdown), Media (Storage browser) |
+
+**Role changes:** admin-only via `PATCH /api/users/[id]/role` — server validates role against `ROLES` enum before write.
+
+**Logout:** `/api/auth/logout` deletes httpOnly cookies
 
 ### Google Login Data Storage Rule
 

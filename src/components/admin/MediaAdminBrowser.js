@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import { isGifAsset } from "@/lib/media/isGifAsset";
 
 const TYPE_LABELS = {
   image: "Image",
@@ -52,6 +54,11 @@ export function MediaAdminBrowser({ assets }) {
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-surface">
                   <tr>
+                    {type === "image" && (
+                      <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
+                        Preview
+                      </th>
+                    )}
                     <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
                       Filename
                     </th>
@@ -75,6 +82,25 @@ export function MediaAdminBrowser({ assets }) {
                       key={asset._id}
                       className="border-t border-border hover:bg-surface-2 transition-colors"
                     >
+                      {type === "image" && (
+                        <td className="px-4 py-3">
+                          {isGifAsset(asset.mimeType) ? (
+                            <img
+                              src={asset.url}
+                              alt={asset.filename}
+                              className="w-16 h-16 object-cover border border-border"
+                            />
+                          ) : (
+                            <Image
+                              src={asset.url}
+                              alt={asset.filename}
+                              width={64}
+                              height={64}
+                              className="w-16 h-16 object-cover border border-border"
+                            />
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-3 font-body text-highlight truncate">
                         {asset.filename}
                       </td>

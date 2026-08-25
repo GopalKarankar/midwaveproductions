@@ -10,16 +10,16 @@ export async function PATCH(request, { params }) {
   if (error) return error;
 
   const { id } = await params;
-  const { status, adminNotes } = await request.json();
-
-  if (status && !BOOKING_STATUSES.includes(status)) {
-    return NextResponse.json(
-      { error: "Invalid status. Must be one of: pending, reviewing, approved, rejected, cancelled" },
-      { status: 400 }
-    );
-  }
 
   try {
+    const { status, adminNotes } = await request.json();
+
+    if (status && !BOOKING_STATUSES.includes(status)) {
+      return NextResponse.json(
+        { error: "Invalid status. Must be one of: pending, reviewing, approved, rejected, cancelled" },
+        { status: 400 }
+      );
+    }
     await dbConnect();
     const updateData = {};
     if (status) updateData.status = status;
