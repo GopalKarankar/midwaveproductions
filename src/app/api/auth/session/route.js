@@ -3,9 +3,12 @@ import { getSession } from '@/lib/auth/getSession';
 
 export async function GET() {
   try {
-    const { session, profile } = await getSession();
+    const { session, profile, blocked } = await getSession();
 
     if (!session) {
+      if (blocked) {
+        return NextResponse.json({ isAuthenticated: false, blocked: true }, { status: 403 });
+      }
       return NextResponse.json(null, { status: 401 });
     }
 

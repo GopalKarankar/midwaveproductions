@@ -6,6 +6,7 @@ import { ROLES } from "@/constants/roles";
 export function UsersAdminTable({ users, currentUserId }) {
   const [localUsers, setLocalUsers] = useState(users);
   const [updatingId, setUpdatingId] = useState(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [errorId, setErrorId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,6 +52,38 @@ export function UsersAdminTable({ users, currentUserId }) {
     }
   };
 
+  const updateStatus = async (userId, nextIsBlocked) => {
+    setStatusUpdatingId(userId);
+    setErrorId(null);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(`/api/users/${userId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isBlocked: nextIsBlocked }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorId(userId);
+        setErrorMessage(data.error || "Failed to update status");
+        return;
+      }
+
+      setLocalUsers((prev) =>
+        prev.map((u) => (u._id.toString() === userId ? { ...u, isBlocked: nextIsBlocked } : u))
+      );
+    } catch (err) {
+      console.error("Error updating user status:", err);
+      setErrorId(userId);
+      setErrorMessage("Failed to update status");
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
+
   const filteredUsers = localUsers.filter((user) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -89,6 +122,9 @@ export function UsersAdminTable({ users, currentUserId }) {
                 Role
               </th>
               <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
+                Status
+              </th>
+              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
                 Joined
               </th>
             </tr>
@@ -112,6 +148,22 @@ export function UsersAdminTable({ users, currentUserId }) {
                     ))}
                   </select>
                   {updatingId === user._id.toString() && (
+                    <span className="ml-2 text-xs text-muted">Updating...</span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => updateStatus(user._id.toString(), !user.isBlocked)}
+                    disabled={statusUpdatingId === user._id.toString() || user._id.toString() === currentUserId}
+                    className={`px-2 py-1 text-xs font-mono uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                      user.isBlocked
+                        ? "bg-error text-white hover:bg-error"
+                        : "border border-border text-muted hover:text-accent hover:border-accent"
+                    }`}
+                  >
+                    {user.isBlocked ? "Blocked" : "Active"}
+                  </button>
+                  {statusUpdatingId === user._id.toString() && (
                     <span className="ml-2 text-xs text-muted">Updating...</span>
                   )}
                 </td>

@@ -98,6 +98,11 @@ export async function GET(request) {
       { upsert: true, new: true }
     );
 
+    // Reject blocked users — redirect without issuing tokens
+    if (user.isBlocked) {
+      return NextResponse.redirect(`${origin}/?blocked=1`);
+    }
+
     // Sign and set access + refresh token cookies
     const accessToken = await signAccessToken({ sub: user._id.toString() });
     const refreshToken = await signRefreshToken({ sub: user._id.toString() });

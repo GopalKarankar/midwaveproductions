@@ -8,10 +8,10 @@ export const metadata = {
 };
 
 export default async function DashboardLayout({ children }) {
-  const { session, profile } = await getSession();
+  const { session, profile, blocked } = await getSession();
 
   if (!session) {
-    redirect("/");
+    redirect(blocked ? "/?blocked=1" : "/");
   }
 
   const isAdmin = profile?.role === "admin";

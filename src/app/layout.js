@@ -1,7 +1,9 @@
 import { Bebas_Neue, DM_Sans, Space_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { LoadingScreen } from "@/components/layout/LoadingScreen";
 import { Navbar } from "@/components/layout/Navbar";
+import { BlockedNotice } from "@/components/layout/BlockedNotice";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -34,6 +36,9 @@ export default function RootLayout({ children }) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <Suspense fallback={null}>
+          <BlockedNotice />
+        </Suspense>
         <LoadingScreen />
         <Navbar />
         {children}

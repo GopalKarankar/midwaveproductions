@@ -13,7 +13,7 @@ export default async function AdminUsersPage() {
   const { session } = await getSession();
   await dbConnect();
   const users = await User.find()
-    .select("email name picture role createdAt")
+    .select("email name picture role isBlocked createdAt")
     .sort({ createdAt: -1 })
     .lean();
 

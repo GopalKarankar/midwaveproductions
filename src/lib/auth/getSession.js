@@ -4,7 +4,7 @@ import User from "@/lib/mongodb/models/User";
 import { verifyAccessToken } from "@/lib/auth/session";
 
 // Server-side session + profile lookup for Route Handlers / Server Components.
-// By the time this runs, middleware has already verified/refreshed the access
+// By the time this runs, proxy has already verified/refreshed the access
 // token cookie for matched routes (/dashboard, /admin, /api/*) — this only
 // needs to trust and verify the (already-fresh) access token, then look up
 // the user's current role/profile in MongoDB.
@@ -28,6 +28,10 @@ export async function getSession() {
 
     if (!user) {
       return { session: null, profile: null };
+    }
+
+    if (user.isBlocked) {
+      return { session: null, profile: null, blocked: true };
     }
 
     return {

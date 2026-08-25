@@ -8,6 +8,7 @@ const UserSchema = new mongoose.Schema(
     name: String,
     picture: String,
     role: { type: String, enum: Object.values(ROLES), default: ROLES.USER },
+    isBlocked: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
