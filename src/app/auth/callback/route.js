@@ -4,11 +4,23 @@ import dbConnect from "@/lib/mongodb/connect";
 import User from "@/lib/mongodb/models/User";
 import { ROLES } from "@/constants/roles";
 import { signAccessToken, signRefreshToken } from "@/lib/auth/session";
-import { getClientIp } from "@/lib/rateLimit";
+import { getClientIp, checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+
+function getDeviceKey(userAgent) {
+  return userAgent
+    .replace(/[\d.]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
 
 export async function GET(request) {
-
-  // console.log("request : ",request);
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: "auth-callback",
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
 
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -106,14 +118,15 @@ export async function GET(request) {
 
     // Record device/user-agent details
     const userAgent = request.headers.get("user-agent") || "unknown";
+    const deviceKey = getDeviceKey(userAgent);
     const ip = getClientIp(request);
     const now = new Date();
 
     try {
       const updated = await User.updateOne(
-        { _id: user._id, "devices.userAgent": userAgent },
+        { _id: user._id, "devices.deviceKey": deviceKey },
         {
-          $set: { "devices.$.lastSeenAt": now, "devices.$.ip": ip },
+          $set: { "devices.$.userAgent": userAgent, "devices.$.lastSeenAt": now, "devices.$.ip": ip },
           $inc: { "devices.$.loginCount": 1 },
         }
       );
@@ -124,7 +137,7 @@ export async function GET(request) {
           {
             $push: {
               devices: {
-                $each: [{ userAgent, ip, firstSeenAt: now, lastSeenAt: now, loginCount: 1 }],
+                $each: [{ deviceKey, userAgent, ip, firstSeenAt: now, lastSeenAt: now, loginCount: 1 }],
                 $slice: -20,
               },
             },
@@ -133,7 +146,11 @@ export async function GET(request) {
       }
     } catch (deviceErr) {
       // Never block login on device-tracking failure
-      console.error("[GET /auth/callback] Failed to record device:", deviceErr);
+      console.error("[GET /auth/callback] Failed to record device", {
+        userId: user._id.toString(),
+        email: user.email,
+        message: deviceErr.message,
+      });
     }
 
     // Sign and set access + refresh token cookies

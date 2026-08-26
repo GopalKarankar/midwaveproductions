@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { sendContactEmail } from "@/lib/email/resend";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -8,12 +8,7 @@ const MESSAGE_MAX_LENGTH = 2000;
 // POST /api/contact — public
 export async function POST(request) {
   const { allowed, retryAfter } = checkRateLimit(request, { routeKey: "contact" });
-  if (!allowed) {
-    return NextResponse.json(
-      { error: "Too many requests. Please try again later." },
-      { status: 429, headers: { "Retry-After": String(retryAfter) } }
-    );
-  }
+  if (!allowed) return rateLimitResponse(retryAfter);
 
   try {
     const body = await request.json();

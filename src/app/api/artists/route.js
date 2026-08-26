@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb/connect";
 import Artist from "@/lib/mongodb/models/Artist";
 import { requireRole } from "@/lib/auth/requireRole";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 const PUBLIC_EXCLUDE = "-pressKit -managedBy -ownerId -__v";
 
 // GET /api/artists — public
 export async function GET(request) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'artists-list',
+    limit: 30,
+    windowMs: 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   try {
     await dbConnect();
     const { searchParams } = new URL(request.url);
@@ -30,6 +38,13 @@ export async function GET(request) {
 
 // POST /api/artists — manager or admin only
 export async function POST(request) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'artists-create',
+    limit: 20,
+    windowMs: 5 * 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   const { error, session } = await requireRole("manager");
   if (error) return error;
 

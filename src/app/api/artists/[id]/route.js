@@ -3,6 +3,7 @@ import dbConnect from "@/lib/mongodb/connect";
 import Artist from "@/lib/mongodb/models/Artist";
 import { getSession } from "@/lib/auth/getSession";
 import { requireRole } from "@/lib/auth/requireRole";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 const PUBLIC_EXCLUDE = "-pressKit -managedBy -ownerId -__v";
 
@@ -11,6 +12,13 @@ const ADMIN_ONLY_FIELDS = ["isPublished", "isFeatured", "managedBy", "ownerId"];
 
 // GET /api/artists/[id] — public
 export async function GET(request, { params }) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'artists-detail',
+    limit: 30,
+    windowMs: 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   const { id } = await params;
 
   try {
@@ -31,6 +39,13 @@ export async function GET(request, { params }) {
 
 // PATCH /api/artists/[id] — owner, manager, or admin
 export async function PATCH(request, { params }) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'artists-update',
+    limit: 20,
+    windowMs: 5 * 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   const { id } = await params;
   const { session, profile } = await getSession();
 
@@ -70,6 +85,13 @@ export async function PATCH(request, { params }) {
 
 // DELETE /api/artists/[id] — admin only
 export async function DELETE(request, { params }) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'artists-delete',
+    limit: 20,
+    windowMs: 5 * 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   const { error } = await requireRole("admin");
   if (error) return error;
 

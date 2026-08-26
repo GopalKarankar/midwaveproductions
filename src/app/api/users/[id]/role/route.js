@@ -4,6 +4,7 @@ import User from "@/lib/mongodb/models/User";
 import Artist from "@/lib/mongodb/models/Artist";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ROLES } from "@/constants/roles";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 function generateSlug(baseName) {
   return baseName
@@ -25,6 +26,13 @@ async function findUniqueSlug(baseSlug) {
 
 // PATCH /api/users/[id]/role — admin only
 export async function PATCH(request, { params }) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'users-role',
+    limit: 20,
+    windowMs: 5 * 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   const { error } = await requireRole("admin");
   if (error) return error;
 

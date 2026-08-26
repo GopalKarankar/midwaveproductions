@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ROLES } from "@/constants/roles";
+import { Badge } from "@/components/ui/Badge";
 
 export function UsersAdminTable({ users, currentUserId }) {
   const [localUsers, setLocalUsers] = useState(users);
@@ -11,6 +12,7 @@ export function UsersAdminTable({ users, currentUserId }) {
   const [errorId, setErrorId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedDevicesId, setExpandedDevicesId] = useState(null);
 
   const updateRole = async (userId, newRole) => {
     const currentUser = localUsers.find((u) => u._id.toString() === userId);
@@ -169,6 +171,9 @@ export function UsersAdminTable({ users, currentUserId }) {
                 Status
               </th>
               <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
+                Device
+              </th>
+              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
                 Joined
               </th>
               <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
@@ -226,6 +231,41 @@ export function UsersAdminTable({ users, currentUserId }) {
                       </div>
                     )}
                   </div>
+                </td>
+                <td className="px-4 py-3">
+                  {!user.devices || user.devices.length === 0 ? (
+                    <span className="text-xs text-muted italic">No login recorded</span>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      <Badge variant="muted">{user.devices[0].label}</Badge>
+                      <div className="text-xs text-muted">
+                        Last seen {new Date(user.devices[0].lastSeenAt).toLocaleDateString()} ·{" "}
+                        {user.devices[0].loginCount}x
+                      </div>
+                      {user.devices.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedDevicesId(
+                              expandedDevicesId === user._id.toString() ? null : user._id.toString()
+                            )
+                          }
+                          className="text-xs font-mono text-accent hover:text-accent-hover uppercase tracking-widest text-left"
+                        >
+                          +{user.devices.length - 1} more {expandedDevicesId === user._id.toString() ? "↑" : "↓"}
+                        </button>
+                      )}
+                      {expandedDevicesId === user._id.toString() && (
+                        <div className="flex flex-col gap-1 mt-1 pt-1 border-t border-border">
+                          {user.devices.slice(1).map((d, i) => (
+                            <div key={i} className="text-xs text-muted">
+                              {d.label} · {new Date(d.lastSeenAt).toLocaleDateString()} · {d.loginCount}x
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3 font-body text-muted text-xs">
                   {new Date(user.createdAt).toLocaleDateString()}

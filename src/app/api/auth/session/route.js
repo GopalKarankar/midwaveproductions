@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
-export async function GET() {
+export async function GET(request) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'auth-session',
+    limit: 60,
+    windowMs: 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
   try {
     const { session, profile, blocked } = await getSession();
 

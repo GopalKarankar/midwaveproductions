@@ -2,10 +2,18 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb/connect";
 import Booking from "@/lib/mongodb/models/Booking";
 import { requireRole } from "@/lib/auth/requireRole";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 const BOOKING_STATUSES = ["pending", "reviewing", "approved", "rejected", "cancelled"];
 
 export async function PATCH(request, { params }) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'bookings-update',
+    limit: 20,
+    windowMs: 5 * 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   const { error } = await requireRole("admin");
   if (error) return error;
 

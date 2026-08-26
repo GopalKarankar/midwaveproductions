@@ -3,10 +3,18 @@ import dbConnect from "@/lib/mongodb/connect";
 import MediaAsset from "@/lib/mongodb/models/MediaAsset";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createClient as createAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 const STORAGE_BUCKET = "media";
 
 export async function DELETE(request, { params }) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'media-delete',
+    limit: 20,
+    windowMs: 5 * 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   const { error } = await requireRole("admin");
   if (error) return error;
 

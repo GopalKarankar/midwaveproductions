@@ -14,6 +14,7 @@ const UserSchema = new mongoose.Schema(
     blockReason: { type: String, trim: true, default: null, maxlength: 500 },
     devices: [
       {
+        deviceKey: { type: String, required: true },
         userAgent: { type: String, required: true },
         ip: String,
         firstSeenAt: { type: Date, default: Date.now },

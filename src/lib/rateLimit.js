@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+
 // Best-effort in-memory per-IP rate limiter. This Map lives in a single
 // serverless instance's memory — it resets on cold start and is NOT shared
 // across concurrent instances, so it is an abuse deterrent, not a real
@@ -29,4 +31,11 @@ export function checkRateLimit(request, { routeKey, limit = 5, windowMs = 10 * 6
 
   entry.count += 1;
   return { allowed: true };
+}
+
+export function rateLimitResponse(retryAfter) {
+  return NextResponse.json(
+    { error: "Too many requests. Please try again later." },
+    { status: 429, headers: { "Retry-After": String(retryAfter) } }
+  );
 }

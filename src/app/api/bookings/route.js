@@ -4,7 +4,7 @@ import dbConnect from "@/lib/mongodb/connect";
 import Booking from "@/lib/mongodb/models/Booking";
 import Artist from "@/lib/mongodb/models/Artist";
 import { requireRole } from "@/lib/auth/requireRole";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { sendBookingConfirmationEmail } from "@/lib/email/resend";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,12 +39,7 @@ export async function GET() {
 // POST /api/bookings — public
 export async function POST(request) {
   const { allowed, retryAfter } = checkRateLimit(request, { routeKey: "bookings" });
-  if (!allowed) {
-    return NextResponse.json(
-      { error: "Too many requests. Please try again later." },
-      { status: 429, headers: { "Retry-After": String(retryAfter) } }
-    );
-  }
+  if (!allowed) return rateLimitResponse(retryAfter);
 
   try {
     const body = await request.json();

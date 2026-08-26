@@ -1,7 +1,14 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
 
-export async function POST() {
+export async function POST(request) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'auth-logout',
+    limit: 20,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
   try {
     const cookieStore = await cookies();
 

@@ -3,6 +3,7 @@ import dbConnect from "@/lib/mongodb/connect";
 import MediaAsset from "@/lib/mongodb/models/MediaAsset";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createClient as createAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 const STORAGE_BUCKET = "media";
 
@@ -20,6 +21,13 @@ const MIME_RULES = {
 
 // POST /api/media/upload — admin only
 export async function POST(request) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'media-upload',
+    limit: 20,
+    windowMs: 5 * 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   const { error, session } = await requireRole("admin");
   if (error) return error;
 

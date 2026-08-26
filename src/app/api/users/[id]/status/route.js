@@ -3,8 +3,16 @@ import dbConnect from "@/lib/mongodb/connect";
 import User from "@/lib/mongodb/models/User";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ROLES } from "@/constants/roles";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 export async function PATCH(request, { params }) {
+  const { allowed, retryAfter } = checkRateLimit(request, {
+    routeKey: 'users-status',
+    limit: 20,
+    windowMs: 5 * 60 * 1000,
+  });
+  if (!allowed) return rateLimitResponse(retryAfter);
+
   const { error, session } = await requireRole("admin");
   if (error) return error;
 
