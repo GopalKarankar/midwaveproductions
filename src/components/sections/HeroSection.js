@@ -5,12 +5,13 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { staggerContainer, fadeInUp } from "@/lib/motion/variants";
 import { useReducedMotionVariants } from "@/hooks/useReducedMotion";
-import { SITEMAP_ENTRIES } from "@/lib/data/sitemapEntries";
+import { SITEMAP_ENTRIES, DASHBOARD_ENTRY } from "@/lib/data/sitemapEntries";
 import { VersionLabel } from "@/components/ui/VersionLabel";
 
 // N°1 — Hero + N°2 Sitemap as split-screen (50/50 desktop, stacked mobile)
-export function HeroSection() {
+export function HeroSection({ isAuthenticated = false }) {
   const { shouldReduceMotion, fadeInUp: reducedFadeInUp } = useReducedMotionVariants();
+  const entries = isAuthenticated ? [...SITEMAP_ENTRIES, DASHBOARD_ENTRY] : SITEMAP_ENTRIES;
 
   return (
     <section className="relative w-full min-h-svh bg-bg grid grid-cols-1 md:grid-cols-2 gap-8 px-6 md:px-12 py-8">
@@ -114,7 +115,7 @@ export function HeroSection() {
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
         >
-          {SITEMAP_ENTRIES.map(({ n, title, sub, action, href }) => (
+          {entries.map(({ n, title, sub, action, href }) => (
             <motion.a
               key={n}
               href={href}

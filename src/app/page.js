@@ -6,15 +6,18 @@ import { MarqueeTicker } from "@/components/layout/MarqueeTicker";
 import { BrandsSection } from "@/components/sections/BrandsSection";
 import { CTASection } from "@/components/sections/CTASection";
 import { Footer } from "@/components/layout/Footer";
+import { getSession } from "@/lib/auth/getSession";
 import {
   marqueeArtistNames,
   marqueeTags,
 } from "@/lib/data/placeholderMarquee";
 
-export default function Home() {
+export default async function Home() {
+  const { session } = await getSession();
+
   return (
     <main className="flex flex-1 flex-col">
-      <HeroSection />
+      <HeroSection isAuthenticated={!!session} />
       <FeaturedArtistsSection />
       <ServicesSection />
       <StatsSection />

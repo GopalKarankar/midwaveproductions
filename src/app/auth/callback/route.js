@@ -4,6 +4,7 @@ import dbConnect from "@/lib/mongodb/connect";
 import User from "@/lib/mongodb/models/User";
 import { ROLES } from "@/constants/roles";
 import { signAccessToken, signRefreshToken } from "@/lib/auth/session";
+import { getClientIp } from "@/lib/rateLimit";
 
 export async function GET(request) {
 
@@ -101,6 +102,38 @@ export async function GET(request) {
     // Reject blocked users — redirect without issuing tokens
     if (user.isBlocked) {
       return NextResponse.redirect(`${origin}/?blocked=1`);
+    }
+
+    // Record device/user-agent details
+    const userAgent = request.headers.get("user-agent") || "unknown";
+    const ip = getClientIp(request);
+    const now = new Date();
+
+    try {
+      const updated = await User.updateOne(
+        { _id: user._id, "devices.userAgent": userAgent },
+        {
+          $set: { "devices.$.lastSeenAt": now, "devices.$.ip": ip },
+          $inc: { "devices.$.loginCount": 1 },
+        }
+      );
+
+      if (updated.matchedCount === 0) {
+        await User.updateOne(
+          { _id: user._id },
+          {
+            $push: {
+              devices: {
+                $each: [{ userAgent, ip, firstSeenAt: now, lastSeenAt: now, loginCount: 1 }],
+                $slice: -20,
+              },
+            },
+          }
+        );
+      }
+    } catch (deviceErr) {
+      // Never block login on device-tracking failure
+      console.error("[GET /auth/callback] Failed to record device:", deviceErr);
     }
 
     // Sign and set access + refresh token cookies

@@ -18,9 +18,9 @@ const MIME_RULES = {
   "application/pdf": { type: "document", maxSize: 15 * 1024 * 1024 },
 };
 
-// POST /api/media/upload — artist, manager, or admin
+// POST /api/media/upload — admin only
 export async function POST(request) {
-  const { error, session } = await requireRole("artist");
+  const { error, session } = await requireRole("admin");
   if (error) return error;
 
   try {

@@ -11,10 +11,14 @@ export async function PATCH(request, { params }) {
   const { id } = await params;
 
   try {
-    const { isBlocked } = await request.json();
+    const { isBlocked, reason } = await request.json();
 
     if (typeof isBlocked !== "boolean") {
       return NextResponse.json({ error: "isBlocked must be a boolean" }, { status: 400 });
+    }
+
+    if (reason !== undefined && typeof reason !== "string") {
+      return NextResponse.json({ error: "reason must be a string" }, { status: 400 });
     }
 
     await dbConnect();
@@ -40,13 +44,22 @@ export async function PATCH(request, { params }) {
       }
     }
 
-    const updated = await User.findByIdAndUpdate(
-      id,
-      { isBlocked, updatedAt: new Date() },
-      { new: true }
-    );
+    const update = { isBlocked, updatedAt: new Date() };
+    if (isBlocked) {
+      update.blockedAt = new Date();
+      update.blockedBy = session.user.id;
+      update.blockReason = reason?.trim() || null;
+    }
 
-    return NextResponse.json({ success: true });
+    const updated = await User.findByIdAndUpdate(id, update, { new: true }).populate("blockedBy", "email name");
+
+    return NextResponse.json({
+      success: true,
+      isBlocked: updated.isBlocked,
+      blockedAt: updated.blockedAt,
+      blockedBy: updated.blockedBy,
+      blockReason: updated.blockReason,
+    });
   } catch (err) {
     console.error("[ROUTE PATCH /api/users/[id]/status]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

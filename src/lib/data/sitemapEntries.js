@@ -5,3 +5,5 @@ export const SITEMAP_ENTRIES = [
   { n: 4, title: "EVENTS & BOOKINGS", sub: "INQUIRIES & SCHEDULING", action: "contact", href: "/booking" },
   { n: 5, title: "ABOUT MIDWAVE", sub: "WHO WE ARE", action: "explore", href: "/about" },
 ];
+
+export const DASHBOARD_ENTRY = { n: 6, title: "DASHBOARD", sub: "YOUR CONTROL PANEL", action: "explore", href: "/dashboard" };

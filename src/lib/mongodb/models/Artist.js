@@ -38,7 +38,7 @@ const ArtistSchema = new mongoose.Schema(
     ],
     isPublished: { type: Boolean, default: false },
     isFeatured: { type: Boolean, default: false },
-    managedBy: { type: String },
+    managedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true }
 );

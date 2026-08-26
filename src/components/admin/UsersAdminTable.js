@@ -7,6 +7,7 @@ export function UsersAdminTable({ users, currentUserId }) {
   const [localUsers, setLocalUsers] = useState(users);
   const [updatingId, setUpdatingId] = useState(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [errorId, setErrorId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,11 +58,17 @@ export function UsersAdminTable({ users, currentUserId }) {
     setErrorId(null);
     setErrorMessage("");
 
+    let reason;
+    if (nextIsBlocked) {
+      reason = window.prompt("Reason for blocking (optional):");
+      if (reason === null) return;
+    }
+
     try {
       const response = await fetch(`/api/users/${userId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isBlocked: nextIsBlocked }),
+        body: JSON.stringify({ isBlocked: nextIsBlocked, ...(reason !== undefined && { reason }) }),
       });
 
       const data = await response.json();
@@ -73,7 +80,17 @@ export function UsersAdminTable({ users, currentUserId }) {
       }
 
       setLocalUsers((prev) =>
-        prev.map((u) => (u._id.toString() === userId ? { ...u, isBlocked: nextIsBlocked } : u))
+        prev.map((u) =>
+          u._id.toString() === userId
+            ? {
+                ...u,
+                isBlocked: data.isBlocked,
+                blockedAt: data.blockedAt,
+                blockedBy: data.blockedBy,
+                blockReason: data.blockReason,
+              }
+            : u
+        )
       );
     } catch (err) {
       console.error("Error updating user status:", err);
@@ -81,6 +98,33 @@ export function UsersAdminTable({ users, currentUserId }) {
       setErrorMessage("Failed to update status");
     } finally {
       setStatusUpdatingId(null);
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    if (!window.confirm("Delete this user? This action cannot be undone.")) return;
+
+    setDeletingId(userId);
+    setErrorId(null);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrorId(userId);
+        setErrorMessage(data.error || "Failed to delete user");
+        return;
+      }
+
+      setLocalUsers((prev) => prev.filter((u) => u._id.toString() !== userId));
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      setErrorId(userId);
+      setErrorMessage("Failed to delete user");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -127,6 +171,9 @@ export function UsersAdminTable({ users, currentUserId }) {
               <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
                 Joined
               </th>
+              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -152,23 +199,48 @@ export function UsersAdminTable({ users, currentUserId }) {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => updateStatus(user._id.toString(), !user.isBlocked)}
-                    disabled={statusUpdatingId === user._id.toString() || user._id.toString() === currentUserId}
-                    className={`px-2 py-1 text-xs font-mono uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                      user.isBlocked
-                        ? "bg-error text-white hover:bg-error"
-                        : "border border-border text-muted hover:text-accent hover:border-accent"
-                    }`}
-                  >
-                    {user.isBlocked ? "Blocked" : "Active"}
-                  </button>
-                  {statusUpdatingId === user._id.toString() && (
-                    <span className="ml-2 text-xs text-muted">Updating...</span>
-                  )}
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => updateStatus(user._id.toString(), !user.isBlocked)}
+                      disabled={statusUpdatingId === user._id.toString() || user._id.toString() === currentUserId}
+                      className={`px-2 py-1 text-xs font-mono uppercase tracking-widest rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        user.isBlocked
+                          ? "bg-error text-white hover:bg-error"
+                          : "border border-border text-muted hover:text-accent hover:border-accent"
+                      }`}
+                    >
+                      {user.isBlocked ? "Blocked" : "Block"}
+                    </button>
+                    {statusUpdatingId === user._id.toString() && (
+                      <span className="text-xs text-muted">Updating...</span>
+                    )}
+                    {user.isBlocked && user.blockedAt && (
+                      <div className="text-xs text-muted space-y-0.5">
+                        <div>
+                          by {user.blockedBy?.email || "unknown"} ·{" "}
+                          {new Date(user.blockedAt).toLocaleDateString()}
+                        </div>
+                        {user.blockReason && (
+                          <div className="italic text-muted">{user.blockReason}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 font-body text-muted text-xs">
                   {new Date(user.createdAt).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => deleteUser(user._id.toString())}
+                    disabled={deletingId === user._id.toString() || user._id.toString() === currentUserId}
+                    className="px-2 py-1 text-xs font-mono uppercase tracking-widest rounded border border-error text-error hover:bg-error hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Delete
+                  </button>
+                  {deletingId === user._id.toString() && (
+                    <span className="ml-2 text-xs text-muted">Deleting...</span>
+                  )}
                 </td>
               </tr>
             ))}

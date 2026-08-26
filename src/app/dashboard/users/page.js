@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/getSession";
 import dbConnect from "@/lib/mongodb/connect";
 import User from "@/lib/mongodb/models/User";
@@ -10,10 +11,16 @@ export const metadata = {
 };
 
 export default async function AdminUsersPage() {
-  const { session } = await getSession();
+  const { session, profile } = await getSession();
+
+  if (!session || profile?.role !== "admin") {
+    redirect("/");
+  }
+
   await dbConnect();
   const users = await User.find()
-    .select("email name picture role isBlocked createdAt")
+    .select("email name picture role isBlocked blockedAt blockedBy blockReason createdAt")
+    .populate("blockedBy", "email name")
     .sort({ createdAt: -1 })
     .lean();
 

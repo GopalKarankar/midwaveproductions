@@ -12,7 +12,7 @@ const ACCESS_COOKIE_OPTIONS = {
   path: '/',
 };
 
-export async function middleware(request) {
+export async function proxy(request) {
   const { pathname } = request.nextUrl;
   const isProtectedPage = pathname.startsWith('/dashboard');
 
@@ -46,7 +46,7 @@ export async function middleware(request) {
 
     return response;
   } catch (error) {
-    console.error(`[middleware ${pathname}] Access token refresh failed:`, error);
+    console.error(`[proxy ${pathname}] Access token refresh failed:`, error);
     if (isProtectedPage) {
       const response = NextResponse.redirect(new URL('/', request.url));
       response.cookies.delete(ACCESS_COOKIE);

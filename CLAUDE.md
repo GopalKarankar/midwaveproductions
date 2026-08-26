@@ -257,7 +257,7 @@ export function hasRole(userRole, requiredRole) {
   - `GET /api/bookings` (list) → admin only; `POST /api/bookings` → public, no auth (booking inquiries are public-facing)
   - `PATCH /api/users/[id]/role` → admin only, validates role against `ROLES` enum, writes to MongoDB `users` collection
 - `POST /api/contact` and `POST /api/bookings`: server-side re-validation always (required fields, email regex) — never trust client validation alone. Both routes use `checkRateLimit()` from `lib/rateLimit.js` (in-memory per-IP limiter, best-effort; resets on cold start, not shared across instances). On production (Vercel), swap for `@upstash/ratelimit` using Vercel KV.
-- File uploads (`/api/media/upload`): validate MIME type + size before writing to Supabase Storage; requires `requireRole('artist')` or higher.
+- File uploads (`/api/media/upload`): validate MIME type + size before writing to Supabase Storage; requires `requireRole('admin')` only.
 
 ---
 

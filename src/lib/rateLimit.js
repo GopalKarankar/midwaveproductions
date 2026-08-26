@@ -5,7 +5,7 @@
 // keep this function's signature so call sites don't need to change.
 const hits = new Map();
 
-function getClientIp(request) {
+export function getClientIp(request) {
   const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) return forwardedFor.split(",")[0].trim();
   return request.headers.get("x-real-ip") || "unknown";

@@ -79,6 +79,9 @@ export function ArtistsAdminTable({ artists }) {
               <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
                 Genres
               </th>
+              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
+                Manager
+              </th>
               <th className="text-center px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
                 Published
               </th>
@@ -93,6 +96,9 @@ export function ArtistsAdminTable({ artists }) {
                 <td className="px-4 py-3 font-body text-highlight">{artist.stageName}</td>
                 <td className="px-4 py-3 font-body text-muted text-xs">
                   {artist.genres?.join(", ") || "—"}
+                </td>
+                <td className="px-4 py-3 font-body text-muted text-xs">
+                  {artist.managedBy ? `${artist.managedBy.name} (${artist.managedBy.email})` : "— Unmanaged —"}
                 </td>
                 <td className="px-4 py-3 text-center">
                   <button
