@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb/connect";
 import Artist from "@/lib/mongodb/models/Artist";
+import MediaAsset from "@/lib/mongodb/models/MediaAsset";
+import Booking from "@/lib/mongodb/models/Booking";
 import { getSession } from "@/lib/auth/getSession";
 import { requireRole } from "@/lib/auth/requireRole";
+import { createClient as createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 
 const PUBLIC_EXCLUDE = "-pressKit -managedBy -ownerId -__v";
@@ -99,6 +102,27 @@ export async function DELETE(request, { params }) {
 
   try {
     await dbConnect();
+    const artist = await Artist.findById(id);
+    if (!artist) {
+      return NextResponse.json({ error: "Artist not found" }, { status: 404 });
+    }
+
+    const assets = await MediaAsset.find({ artistId: id });
+    if (assets.length > 0) {
+      const supabaseAdmin = createAdminClient();
+      const { error: deleteError } = await supabaseAdmin.storage
+        .from("media")
+        .remove(assets.map((a) => a.storagePath));
+
+      if (deleteError) {
+        console.error("[ROUTE DELETE /api/artists/[id]] storage delete failed", deleteError);
+        return NextResponse.json({ error: "Failed to delete media from storage" }, { status: 500 });
+      }
+
+      await MediaAsset.deleteMany({ artistId: id });
+    }
+
+    await Booking.deleteMany({ artistId: id });
     await Artist.findByIdAndDelete(id);
     return NextResponse.json({ success: true });
   } catch (err) {

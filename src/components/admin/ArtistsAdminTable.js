@@ -5,6 +5,7 @@ import { useState } from "react";
 export function ArtistsAdminTable({ artists }) {
   const [localArtists, setLocalArtists] = useState(artists);
   const [updatingId, setUpdatingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [errorId, setErrorId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,6 +43,35 @@ export function ArtistsAdminTable({ artists }) {
       setErrorMessage("Failed to update");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const deleteArtist = async (artistId) => {
+    if (!window.confirm("Delete this artist? This will also remove their media files and booking records. This action cannot be undone.")) return;
+
+    setDeletingId(artistId);
+    setErrorId(null);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(`/api/artists/${artistId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setErrorId(artistId);
+        setErrorMessage(data.error || "Failed to delete artist");
+        return;
+      }
+
+      setLocalArtists((prev) => prev.filter((a) => a._id.toString() !== artistId));
+    } catch (err) {
+      console.error("Error deleting artist:", err);
+      setErrorId(artistId);
+      setErrorMessage("Failed to delete artist");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -88,6 +118,9 @@ export function ArtistsAdminTable({ artists }) {
               <th className="text-center px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
                 Featured
               </th>
+              <th className="text-center px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -123,6 +156,15 @@ export function ArtistsAdminTable({ artists }) {
                     }`}
                     title={artist.isFeatured ? "Featured" : "Not featured"}
                   />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <button
+                    onClick={() => deleteArtist(artist._id.toString())}
+                    disabled={deletingId === artist._id.toString() || updatingId === artist._id.toString()}
+                    className="font-mono text-xs text-error hover:text-error-hover disabled:opacity-50 transition-colors"
+                  >
+                    {deletingId === artist._id.toString() ? "Deleting..." : "Delete"}
+                  </button>
                 </td>
               </tr>
             ))}
