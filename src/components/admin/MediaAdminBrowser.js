@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
+import { useReactTable, getCoreRowModel, createColumnHelper } from "@tanstack/react-table";
+import { useTableQueryState } from "@/hooks/useTableQueryState";
+import { DataTable } from "@/components/ui/DataTable";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
+import { TableSearchInput } from "@/components/ui/TableSearchInput";
 import { isGifAsset } from "@/lib/media/isGifAsset";
 
 const TYPE_LABELS = {
@@ -11,11 +16,97 @@ const TYPE_LABELS = {
   document: "Document",
 };
 
-export function MediaAdminBrowser({ assets }) {
+const TYPE_ORDER = ["image", "audio", "video", "document"];
+
+const columnHelper = createColumnHelper();
+
+function createMediaColumns() {
+  return [
+    columnHelper.accessor("filename", {
+      id: "filename",
+      header: "Filename",
+      cell: (info) => <span className="font-body text-highlight truncate">{info.getValue()}</span>,
+    }),
+    columnHelper.accessor("artistId.stageName", {
+      id: "artist",
+      header: "Artist",
+      cell: (info) => <span className="font-body text-muted text-xs">{info.getValue() || "—"}</span>,
+    }),
+    columnHelper.accessor("size", {
+      id: "size",
+      header: "Size",
+      cell: (info) => {
+        const size = info.getValue();
+        return <span className="font-body text-muted text-xs">{size ? (size / 1024 / 1024).toFixed(2) : "—"} MB</span>;
+      },
+    }),
+    columnHelper.accessor("createdAt", {
+      id: "createdAt",
+      header: "Uploaded",
+      cell: (info) => (
+        <span className="font-body text-muted text-xs">
+          {new Date(info.getValue()).toLocaleDateString()}
+        </span>
+      ),
+    }),
+    columnHelper.display({
+      id: "preview",
+      header: "Preview",
+      cell: (info) => {
+        const asset = info.row.original;
+        if (asset.type !== "image") return null;
+
+        return isGifAsset(asset.mimeType) ? (
+          <img
+            src={asset.url}
+            alt={asset.filename}
+            className="w-16 h-16 object-cover border border-border"
+          />
+        ) : (
+          <Image
+            src={asset.url}
+            alt={asset.filename}
+            width={64}
+            height={64}
+            className="w-16 h-16 object-cover border border-border"
+          />
+        );
+      },
+    }),
+    columnHelper.display({
+      id: "actions",
+      header: "Action",
+      cell: (info) => {
+        const asset = info.row.original;
+        const isDeleting = info.row.original._isDeleting;
+
+        return (
+          <button
+            onClick={() => info.row.original._onDelete(asset._id)}
+            disabled={isDeleting}
+            className="text-error hover:text-error-hover transition-colors text-xs font-mono uppercase tracking-widest disabled:opacity-50"
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        );
+      },
+    }),
+  ];
+}
+
+export function MediaAdminBrowser({ assets, page, pageSize, totalCount }) {
   const [localAssets, setLocalAssets] = useState(assets);
   const [isDeleting, setIsDeleting] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const { type, q, setParams, isPending } = useTableQueryState();
+  const [searchValue, setSearchValue] = useState(q);
+
+  // Resync when prop data changes
+  useEffect(() => {
+    setLocalAssets(assets);
+  }, [assets]);
+
+  const activeType = type === "all" ? "all" : type;
 
   const deleteAsset = async (assetId) => {
     if (!confirm("Delete this media file? This action cannot be undone.")) return;
@@ -34,7 +125,7 @@ export function MediaAdminBrowser({ assets }) {
         return;
       }
 
-      setLocalAssets((prev) => prev.filter((a) => a._id.toString() !== assetId));
+      setLocalAssets((prev) => prev.filter((a) => a._id !== assetId));
     } catch (err) {
       console.error("Error deleting media:", err);
       setErrorMessage("Failed to delete media file");
@@ -43,128 +134,72 @@ export function MediaAdminBrowser({ assets }) {
     }
   };
 
-  const filteredAssets = localAssets.filter((asset) => {
-    const query = searchQuery.toLowerCase();
-    return asset.filename.toLowerCase().includes(query);
-  });
+  // Enhance assets with delete callback for the cell renderer
+  const enhancedAssets = localAssets.map((asset) => ({
+    ...asset,
+    _isDeleting: isDeleting === asset._id,
+    _onDelete: deleteAsset,
+  }));
 
-  const groupedByType = {
-    image: filteredAssets.filter((a) => a.type === "image"),
-    video: filteredAssets.filter((a) => a.type === "video"),
-    audio: filteredAssets.filter((a) => a.type === "audio"),
-    document: filteredAssets.filter((a) => a.type === "document"),
-  };
+  const columns = useMemo(() => createMediaColumns(), []);
+
+  const table = useReactTable({
+    data: enhancedAssets,
+    columns,
+    pageCount: Math.ceil(totalCount / pageSize),
+    state: {
+      pagination: { pageIndex: page - 1, pageSize },
+    },
+    manualPagination: true,
+    onPaginationChange: (updater) => {
+      const next = typeof updater === "function" ? updater({ pageIndex: page - 1, pageSize }) : updater;
+      setParams({ page: next.pageIndex + 1 });
+    },
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   return (
     <div className="flex flex-col gap-8">
-      <input
-        type="text"
-        placeholder="Search by filename..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="max-w-md bg-transparent border-b border-border px-0 py-2 text-sm font-body text-highlight placeholder-muted focus:outline-none focus:border-accent transition-colors"
-      />
+      <div className="flex flex-col gap-4">
+        <div className="flex gap-2 flex-wrap">
+          {["all", ...TYPE_ORDER].map((t) => (
+            <button
+              key={t}
+              onClick={() => setParams({ type: t === "all" ? "all" : t })}
+              className={`px-3 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${
+                activeType === t
+                  ? "text-accent-2 border-b-2 border-accent-2"
+                  : "text-muted hover:text-highlight border-b-2 border-transparent"
+              }`}
+            >
+              {t === "all" ? "All" : TYPE_LABELS[t]}
+            </button>
+          ))}
+        </div>
+
+        <TableSearchInput
+          value={searchValue}
+          onChange={setSearchValue}
+          onSearch={(v) => setParams({ q: v })}
+          placeholder="Search by filename..."
+        />
+      </div>
 
       {errorMessage && (
-        <p className="font-mono text-xs text-error tracking-widest uppercase">
-          {errorMessage}
-        </p>
+        <p className="font-mono text-xs text-error tracking-widest uppercase">{errorMessage}</p>
       )}
 
-      <div className="flex flex-col gap-12">
-        {Object.entries(groupedByType).map(([type, items]) =>
-          items.length > 0 ? (
-            <div key={type}>
-              <h2 className="text-lg font-display uppercase tracking-display text-accent-2 mb-6">
-                {TYPE_LABELS[type]} ({items.length})
-              </h2>
-              <div className="overflow-x-auto border border-border">
-                <table className="w-full text-sm">
-                  <thead className="border-b border-border bg-surface">
-                    <tr>
-                      {type === "image" && (
-                        <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                          Preview
-                        </th>
-                      )}
-                      <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                        Filename
-                      </th>
-                      <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                        Artist
-                      </th>
-                      <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                        Size
-                      </th>
-                      <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                        Uploaded
-                      </th>
-                      <th className="text-center px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((asset) => (
-                      <tr
-                        key={asset._id}
-                        className="border-t border-border hover:bg-surface-2 transition-colors"
-                      >
-                        {type === "image" && (
-                          <td className="px-4 py-3">
-                            {isGifAsset(asset.mimeType) ? (
-                              <img
-                                src={asset.url}
-                                alt={asset.filename}
-                                className="w-16 h-16 object-cover border border-border"
-                              />
-                            ) : (
-                              <Image
-                                src={asset.url}
-                                alt={asset.filename}
-                                width={64}
-                                height={64}
-                                className="w-16 h-16 object-cover border border-border"
-                              />
-                            )}
-                          </td>
-                        )}
-                        <td className="px-4 py-3 font-body text-highlight truncate">
-                          {asset.filename}
-                        </td>
-                        <td className="px-4 py-3 font-body text-muted text-xs">
-                          {asset.artistId?.stageName || "—"}
-                        </td>
-                        <td className="px-4 py-3 font-body text-muted text-xs">
-                          {asset.size ? (asset.size / 1024 / 1024).toFixed(2) : "—"} MB
-                        </td>
-                        <td className="px-4 py-3 font-body text-muted text-xs">
-                          {new Date(asset.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => deleteAsset(asset._id.toString())}
-                            disabled={isDeleting === asset._id.toString()}
-                            className="text-error hover:text-error-hover transition-colors text-xs font-mono uppercase tracking-widest disabled:opacity-50"
-                          >
-                            {isDeleting === asset._id.toString() ? "Deleting..." : "Delete"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : null
-        )}
+      <DataTable table={table} isPending={isPending} emptyMessage="No media files found." />
 
-        {filteredAssets.length === 0 && (
-          <p className="font-body text-muted text-center py-12">
-            {searchQuery ? "No media files found." : "No media files yet."}
-          </p>
-        )}
-      </div>
+      <DataTablePagination
+        page={page}
+        pageCount={table.getPageCount()}
+        totalCount={totalCount}
+        onPageChange={(p) => setParams({ page: p })}
+        pageSize={pageSize}
+        onPageSizeChange={(size) => setParams({ pageSize: size, page: 1 })}
+        isPending={isPending}
+      />
     </div>
   );
 }

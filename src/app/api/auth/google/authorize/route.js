@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rateLimit';
+import { withApiLog } from '@/lib/monitoring/withApiLog';
 
-export async function GET(request) {
+export const GET = withApiLog('auth-google-authorize', async function GET(request, { logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'auth-google-authorize',
     limit: 10,
     windowMs: 10 * 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
   try {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
@@ -44,4 +48,4 @@ export async function GET(request) {
     console.error('[GET /api/auth/google/authorize] Error:', error);
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_SITE_URL}/?error=auth_failed`);
   }
-}
+});

@@ -3,17 +3,23 @@ import dbConnect from "@/lib/mongodb/connect";
 import User from "@/lib/mongodb/models/User";
 import { requireRole } from "@/lib/auth/requireRole";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { withApiLog } from "@/lib/monitoring/withApiLog";
 
-export async function DELETE(request, { params }) {
+export const DELETE = withApiLog("users-delete", async function DELETE(request, { params, logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'users-delete',
     limit: 20,
     windowMs: 5 * 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
-  const { error, session } = await requireRole("admin");
+  const { error, session, profile } = await requireRole("admin");
   if (error) return error;
+  logMeta.userId = session.user.id;
+  logMeta.userRoles = profile.roles ?? [];
 
   const { id } = await params;
 
@@ -34,8 +40,8 @@ export async function DELETE(request, { params }) {
     }
 
     // Prevent deleting the last remaining admin
-    if (user.role === "admin") {
-      const adminCount = await User.countDocuments({ role: "admin" });
+    if (user.roles.includes("admin")) {
+      const adminCount = await User.countDocuments({ roles: "admin" });
       if (adminCount <= 1) {
         return NextResponse.json(
           { error: "Cannot delete the last remaining admin." },
@@ -51,4 +57,4 @@ export async function DELETE(request, { params }) {
     console.error("[ROUTE DELETE /api/users/[id]]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

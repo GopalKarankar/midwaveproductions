@@ -1,8 +1,9 @@
 import Image from "next/image";
 import { VersionLabel } from "@/components/ui/VersionLabel";
-import { socialLinks } from "@/constants/socialLinks";
+import { getSocialLinks } from "@/lib/settings/getSocialLinks";
 
-export function Footer() {
+export async function Footer() {
+  const socialLinks = await getSocialLinks();
   return (
     <footer className="bg-bg border-t border-border px-6 md:px-12 py-16">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-12">
@@ -33,11 +34,31 @@ export function Footer() {
       </div>
 
       <div className="mt-16 flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-t border-border pt-6">
-        <p className="font-mono text-xs text-muted tracking-widest uppercase">
-          Copyright © Midwave Productions™
-          <br />
-          All Rights Reserved
-        </p>
+        <div className="flex flex-col gap-3">
+          <p className="font-mono text-xs text-muted tracking-widest uppercase">
+            Copyright © Midwave Productions™
+            <br />
+            All Rights Reserved
+          </p>
+          <ul className="flex gap-4">
+            <li>
+              <a
+                href="/terms"
+                className="font-mono text-xs text-text hover:text-accent transition-colors duration-200 tracking-widest uppercase"
+              >
+                Terms ↗
+              </a>
+            </li>
+            <li>
+              <a
+                href="/privacy"
+                className="font-mono text-xs text-text hover:text-accent transition-colors duration-200 tracking-widest uppercase"
+              >
+                Privacy ↗
+              </a>
+            </li>
+          </ul>
+        </div>
         <VersionLabel />
       </div>
     </footer>

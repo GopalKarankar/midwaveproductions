@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children }) {
     redirect(blocked ? "/?blocked=1" : "/");
   }
 
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = profile?.roles?.includes("admin");
   const sidebarConfig = isAdmin ? adminSidebarConfig : dashboardSidebarConfig;
 
   return (
@@ -34,7 +34,7 @@ export default async function DashboardLayout({ children }) {
         </span>
       </div>
 
-      {isAdmin ? <AdminSidebar /> : <DashboardSidebar userRole={profile?.role} />}
+      {isAdmin ? <AdminSidebar /> : <DashboardSidebar userRole={profile?.roles} />}
       <main className="flex-1 md:border-l border-border overflow-auto">
         {children}
       </main>

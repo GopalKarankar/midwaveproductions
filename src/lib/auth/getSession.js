@@ -51,7 +51,7 @@ export async function getSession() {
           picture: user.picture,
         },
       },
-      profile: { role: user.role },
+      profile: { roles: user.roles?.length ? user.roles : ["user"] },
     };
   } catch (error) {
     console.error("[getSession] JWT verification or MongoDB lookup failed:", error);

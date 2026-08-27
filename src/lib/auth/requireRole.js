@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/getSession";
-import { ROLE_HIERARCHY } from "@/constants/roles";
+import { hasRole } from "@/constants/roles";
 
 // Role guard for API routes. Usage:
 //   const { error, session, profile } = await requireRole('manager')
@@ -16,10 +16,7 @@ export async function requireRole(requiredRole) {
     };
   }
 
-  const userLevel = ROLE_HIERARCHY[profile?.role] ?? -1;
-  const requiredLevel = ROLE_HIERARCHY[requiredRole] ?? 999;
-
-  if (userLevel < requiredLevel) {
+  if (!hasRole(profile?.roles, requiredRole)) {
     return {
       error: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
       session: null,

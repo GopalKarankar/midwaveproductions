@@ -4,32 +4,27 @@ import MediaAsset from "@/lib/mongodb/models/MediaAsset";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createClient as createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { MIME_RULES } from "@/lib/media/mimeRules";
+import { withApiLog } from "@/lib/monitoring/withApiLog";
 
 const STORAGE_BUCKET = "media";
 
-// Allow-list keyed to MediaAsset.type — never trust a client-declared type.
-const MIME_RULES = {
-  "image/jpeg": { type: "image", maxSize: 10 * 1024 * 1024 },
-  "image/png": { type: "image", maxSize: 10 * 1024 * 1024 },
-  "image/webp": { type: "image", maxSize: 10 * 1024 * 1024 },
-  "image/gif": { type: "image", maxSize: 10 * 1024 * 1024 },
-  "audio/mpeg": { type: "audio", maxSize: 50 * 1024 * 1024 },
-  "audio/wav": { type: "audio", maxSize: 50 * 1024 * 1024 },
-  "video/mp4": { type: "video", maxSize: 200 * 1024 * 1024 },
-  "application/pdf": { type: "document", maxSize: 15 * 1024 * 1024 },
-};
-
 // POST /api/media/upload — admin only
-export async function POST(request) {
+export const POST = withApiLog("media-upload", async function POST(request, { logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'media-upload',
     limit: 20,
     windowMs: 5 * 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
-  const { error, session } = await requireRole("admin");
+  const { error, session, profile } = await requireRole("admin");
   if (error) return error;
+  logMeta.userId = session.user.id;
+  logMeta.userRoles = profile.roles ?? [];
 
   try {
     const formData = await request.formData();
@@ -89,4 +84,4 @@ export async function POST(request) {
     console.error("[ROUTE POST /api/media/upload]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

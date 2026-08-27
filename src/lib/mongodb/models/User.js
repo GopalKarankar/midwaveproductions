@@ -7,7 +7,7 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     name: String,
     picture: String,
-    role: { type: String, enum: Object.values(ROLES), default: ROLES.USER },
+    roles: { type: [String], enum: Object.values(ROLES), default: [ROLES.USER] },
     isBlocked: { type: Boolean, default: false },
     blockedAt: { type: Date, default: null },
     blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },

@@ -3,19 +3,25 @@ import dbConnect from "@/lib/mongodb/connect";
 import Booking from "@/lib/mongodb/models/Booking";
 import { requireRole } from "@/lib/auth/requireRole";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { withApiLog } from "@/lib/monitoring/withApiLog";
 
 const BOOKING_STATUSES = ["pending", "reviewing", "approved", "rejected", "cancelled"];
 
-export async function PATCH(request, { params }) {
+export const PATCH = withApiLog("bookings-update", async function PATCH(request, { params, logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'bookings-update',
     limit: 20,
     windowMs: 5 * 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
-  const { error } = await requireRole("admin");
+  const { error, session, profile } = await requireRole("admin");
   if (error) return error;
+  logMeta.userId = session.user.id;
+  logMeta.userRoles = profile.roles ?? [];
 
   const { id } = await params;
 
@@ -47,4 +53,4 @@ export async function PATCH(request, { params }) {
     console.error("[ROUTE PATCH /api/bookings/[id]]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

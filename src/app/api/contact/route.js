@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { sendContactEmail } from "@/lib/email/resend";
+import { withApiLog } from "@/lib/monitoring/withApiLog";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MESSAGE_MAX_LENGTH = 2000;
 
 // POST /api/contact — public
-export async function POST(request) {
+export const POST = withApiLog("contact", async function POST(request, { logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, { routeKey: "contact" });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
   try {
     const body = await request.json();
@@ -42,4 +46,4 @@ export async function POST(request) {
     console.error("[ROUTE POST /api/contact]", err);
     return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
-}
+});

@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useReactTable, getCoreRowModel, getExpandedRowModel, createColumnHelper } from "@tanstack/react-table";
+import { useTableQueryState } from "@/hooks/useTableQueryState";
+import { DataTable } from "@/components/ui/DataTable";
+import { DataTablePagination } from "@/components/ui/DataTablePagination";
+import { Badge } from "@/components/ui/Badge";
 
 const STATUSES = ["pending", "reviewing", "approved", "rejected", "cancelled"];
 
@@ -12,32 +17,87 @@ const STATUS_COLORS = {
   cancelled: "text-muted",
 };
 
-export function BookingsAdminTable({ bookings }) {
+const columnHelper = createColumnHelper();
+
+function createBookingColumns({ onStatusChange, updatingId, errorMessage }) {
+  return [
+    columnHelper.accessor("requesterName", {
+      id: "requesterName",
+      header: "Requester",
+      cell: (info) => <span className="font-body text-highlight">{info.getValue()}</span>,
+    }),
+    columnHelper.accessor("artistId.stageName", {
+      id: "artistName",
+      header: "Artist",
+      cell: (info) => <span className="font-body text-muted">{info.getValue()}</span>,
+    }),
+    columnHelper.accessor("eventType", {
+      id: "eventType",
+      header: "Event Type",
+      cell: (info) => <span className="font-body text-muted text-xs capitalize">{info.getValue()}</span>,
+    }),
+    columnHelper.accessor("status", {
+      id: "status",
+      header: "Status",
+      cell: (info) => {
+        const bookingId = info.row.original._id;
+        const currentStatus = info.getValue();
+        const isUpdating = updatingId === bookingId;
+
+        return (
+          <div className="flex items-center gap-2">
+            <select
+              value={currentStatus}
+              onChange={(e) => onStatusChange(bookingId, e.target.value)}
+              disabled={isUpdating}
+              className={`bg-transparent border border-border px-2 py-1 text-xs font-mono uppercase tracking-widest rounded cursor-pointer disabled:opacity-50 ${
+                STATUS_COLORS[currentStatus]
+              }`}
+            >
+              {STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+            {isUpdating && <span className="text-xs text-muted">Updating...</span>}
+          </div>
+        );
+      },
+    }),
+    columnHelper.accessor("eventDate", {
+      id: "eventDate",
+      header: "Date",
+      cell: (info) => {
+        const date = info.getValue();
+        return (
+          <span className="font-body text-muted text-xs">
+            {date ? new Date(date).toLocaleDateString() : "—"}
+          </span>
+        );
+      },
+    }),
+  ];
+}
+
+export function BookingsAdminTable({ bookings, page, pageSize, totalCount, statusCounts }) {
   const [localBookings, setLocalBookings] = useState(bookings);
   const [updatingId, setUpdatingId] = useState(null);
-  const [errorId, setErrorId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
+  const { status, setParams, isPending } = useTableQueryState();
 
-  const statusCounts = useMemo(() => {
-    const counts = { all: localBookings.length };
-    STATUSES.forEach((status) => {
-      counts[status] = localBookings.filter((b) => b.status === status).length;
-    });
-    return counts;
-  }, [localBookings]);
+  // Resync when prop data changes
+  useEffect(() => {
+    setLocalBookings(bookings);
+  }, [bookings]);
 
-  const filteredBookings =
-    activeTab === "all"
-      ? localBookings
-      : localBookings.filter((b) => b.status === activeTab);
+  const activeTab = status === "all" ? "all" : status;
 
   const updateStatus = async (bookingId, newStatus) => {
-    const currentBooking = localBookings.find((b) => b._id.toString() === bookingId);
+    const currentBooking = localBookings.find((b) => b._id === bookingId);
     if (currentBooking.status === newStatus) return;
 
     setUpdatingId(bookingId);
-    setErrorId(null);
     setErrorMessage("");
 
     try {
@@ -49,23 +109,42 @@ export function BookingsAdminTable({ bookings }) {
 
       if (!response.ok) {
         const data = await response.json();
-        setErrorId(bookingId);
         setErrorMessage(data.error || "Failed to update");
         return;
       }
 
       const { booking } = await response.json();
       setLocalBookings((prev) =>
-        prev.map((b) => (b._id.toString() === bookingId ? booking : b))
+        prev.map((b) => (b._id === bookingId ? booking : b))
       );
     } catch (err) {
       console.error("Error updating booking:", err);
-      setErrorId(bookingId);
       setErrorMessage("Failed to update");
     } finally {
       setUpdatingId(null);
     }
   };
+
+  const columns = useMemo(
+    () => createBookingColumns({ onStatusChange: updateStatus, updatingId, errorMessage }),
+    [updatingId, errorMessage]
+  );
+
+  const table = useReactTable({
+    data: localBookings,
+    columns,
+    pageCount: Math.ceil(totalCount / pageSize),
+    state: {
+      pagination: { pageIndex: page - 1, pageSize },
+    },
+    manualPagination: true,
+    onPaginationChange: (updater) => {
+      const next = typeof updater === "function" ? updater({ pageIndex: page - 1, pageSize }) : updater;
+      setParams({ page: next.pageIndex + 1 });
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -73,14 +152,14 @@ export function BookingsAdminTable({ bookings }) {
         {["all", ...STATUSES].map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => setParams({ status: tab === "all" ? "all" : tab })}
             className={`px-3 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${
               activeTab === tab
                 ? "text-accent-2 border-b-2 border-accent-2"
                 : "text-muted hover:text-highlight border-b-2 border-transparent"
             }`}
           >
-            {tab === "all" ? "All" : tab} ({statusCounts[tab]})
+            {tab === "all" ? "All" : tab} ({statusCounts[tab] || 0})
           </button>
         ))}
       </div>
@@ -91,66 +170,17 @@ export function BookingsAdminTable({ bookings }) {
         </p>
       )}
 
-      <div className="overflow-x-auto border border-border">
-        <table className="w-full text-sm">
-          <thead className="border-b border-border bg-surface">
-            <tr>
-              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                Requester
-              </th>
-              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                Artist
-              </th>
-              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                Event Type
-              </th>
-              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                Status
-              </th>
-              <th className="text-left px-4 py-3 font-mono text-xs text-muted uppercase tracking-widest">
-                Date
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredBookings.map((booking) => (
-              <tr key={booking._id} className="border-t border-border hover:bg-surface-2 transition-colors">
-                <td className="px-4 py-3 font-body text-highlight">{booking.requesterName}</td>
-                <td className="px-4 py-3 font-body text-muted">{booking.artistId?.stageName}</td>
-                <td className="px-4 py-3 font-body text-muted text-xs capitalize">{booking.eventType}</td>
-                <td className="px-4 py-3">
-                  <select
-                    value={booking.status}
-                    onChange={(e) => updateStatus(booking._id.toString(), e.target.value)}
-                    disabled={updatingId === booking._id.toString()}
-                    className={`bg-transparent border border-border px-2 py-1 text-xs font-mono uppercase tracking-widest rounded cursor-pointer disabled:opacity-50 ${
-                      STATUS_COLORS[booking.status]
-                    }`}
-                  >
-                    {STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-                  {updatingId === booking._id.toString() && (
-                    <span className="ml-2 text-xs text-muted">Updating...</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 font-body text-muted text-xs">
-                  {booking.eventDate
-                    ? new Date(booking.eventDate).toLocaleDateString()
-                    : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable table={table} isPending={isPending} emptyMessage="No bookings found." />
 
-      {filteredBookings.length === 0 && (
-        <p className="font-body text-muted text-center py-8">No bookings found.</p>
-      )}
+      <DataTablePagination
+        page={page}
+        pageCount={table.getPageCount()}
+        totalCount={totalCount}
+        onPageChange={(p) => setParams({ page: p })}
+        pageSize={pageSize}
+        onPageSizeChange={(size) => setParams({ pageSize: size, page: 1 })}
+        isPending={isPending}
+      />
     </div>
   );
 }

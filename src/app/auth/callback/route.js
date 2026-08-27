@@ -106,7 +106,7 @@ export async function GET(request) {
           name: googleUser.name,
           picture: googleUser.picture,
         },
-        $setOnInsert: { role: ROLES.USER },
+        $setOnInsert: { roles: [ROLES.USER] },
       },
       { upsert: true, new: true }
     );

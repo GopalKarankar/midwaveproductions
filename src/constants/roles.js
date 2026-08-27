@@ -12,6 +12,8 @@ export const ROLE_HIERARCHY = {
   admin: 3,
 };
 
-export function hasRole(userRole, requiredRole) {
-  return (ROLE_HIERARCHY[userRole] ?? -1) >= (ROLE_HIERARCHY[requiredRole] ?? 999);
+export function hasRole(userRoles, requiredRole) {
+  const roles = Array.isArray(userRoles) ? userRoles : [];
+  const maxLevel = roles.reduce((max, r) => Math.max(max, ROLE_HIERARCHY[r] ?? -1), -1);
+  return maxLevel >= (ROLE_HIERARCHY[requiredRole] ?? 999);
 }

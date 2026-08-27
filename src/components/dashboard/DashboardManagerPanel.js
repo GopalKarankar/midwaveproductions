@@ -1,7 +1,7 @@
 import { SectionNumber } from "@/components/ui/SectionNumber";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 
-export function DashboardManagerPanel({ artists, bookings }) {
+export function DashboardManagerPanel({ artists, bookings, sectionNumber = "1" }) {
   const bookingsByStatus = {
     pending: bookings.filter((b) => b.status === "pending"),
     reviewing: bookings.filter((b) => b.status === "reviewing"),
@@ -12,7 +12,7 @@ export function DashboardManagerPanel({ artists, bookings }) {
   return (
     <div className="px-8 py-12 max-w-4xl">
       <div className="flex items-center gap-3 mb-12">
-        <SectionNumber n="1" />
+        <SectionNumber n={sectionNumber} />
         <SectionHeading className="!text-3xl">Your Roster</SectionHeading>
       </div>
 

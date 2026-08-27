@@ -3,17 +3,21 @@ import dbConnect from "@/lib/mongodb/connect";
 import Artist from "@/lib/mongodb/models/Artist";
 import { requireRole } from "@/lib/auth/requireRole";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { withApiLog } from "@/lib/monitoring/withApiLog";
 
 const PUBLIC_EXCLUDE = "-pressKit -managedBy -ownerId -__v";
 
 // GET /api/artists — public
-export async function GET(request) {
+export const GET = withApiLog("artists-list", async function GET(request, { logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'artists-list',
     limit: 30,
     windowMs: 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
   try {
     await dbConnect();
@@ -34,19 +38,24 @@ export async function GET(request) {
     console.error("[ROUTE GET /api/artists]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});
 
 // POST /api/artists — manager or admin only
-export async function POST(request) {
+export const POST = withApiLog("artists-create", async function POST(request, { logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'artists-create',
     limit: 20,
     windowMs: 5 * 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
-  const { error, session } = await requireRole("manager");
+  const { error, session, profile } = await requireRole("manager");
   if (error) return error;
+  logMeta.userId = session.user.id;
+  logMeta.userRoles = profile.roles ?? [];
 
   try {
     await dbConnect();
@@ -82,4 +91,4 @@ export async function POST(request) {
     console.error("[ROUTE POST /api/artists]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

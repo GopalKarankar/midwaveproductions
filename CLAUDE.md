@@ -109,8 +109,7 @@ Dual-row marquee ticker at section transitions — row 1 scrolls left (artist na
 src/
 ├── app/
 │   ├── (public)/            # page.js, artists/, services/, media/, booking/, about/
-│   ├── dashboard/            # role-guarded: redirects admins to /admin
-│   ├── admin/                # role-guarded: admin-only, full CRUD
+│   ├── dashboard/            # role-guarded; admin role shows admin sidebar + overview panel inline
 │   └── api/                  # artists/, bookings/, contact/, media/upload/, users/[id]/role/
 ├── components/
 │   ├── ui/                   # ArrowLink, Badge, SectionNumber, SectionHeading, FormField, VersionLabel
@@ -294,10 +293,18 @@ Genre-grouped video showcase (Pattern 1) → marquee → press kit request secti
 `N°4` header, `BookingForm` with bottom-border-only fields (no box chrome), artist pre-fill via `?artist=[id]` query param, inline success state (no page reload).
 
 ### Dashboard (`/dashboard`)
-Numbered sidebar nav. Artists: edit own profile. Managers: assigned roster + booking statuses. Admins redirected to `/admin`.
-
-### Admin (`/admin`)
-Numbered sidebar: Overview (stat tiles) / Artists (publish+feature toggles) / Bookings (status filter tabs) / Users (role dropdown) / Media (Storage browser).
+Numbered sidebar nav. Content adapts by role:
+- **Artists:** edit own profile (editable bio, genres, social, press kit, featured tracks, upcoming events).
+- **Managers:** assigned roster list (filtered to `managedBy: userId`) + booking statuses (artist name, event date, status filter tabs).
+- **Admins:** full inline admin panel with:
+  - Overview (stat tiles: total artists, bookings, users, pending bookings; quick-access links)
+  - `/dashboard/artists` — publish+feature toggles (role-filtered user view)
+  - `/dashboard/bookings` — status filter tabs (pending/reviewing/approved/rejected/cancelled)
+  - `/dashboard/users` — role dropdown (assign/change user roles)
+  - `/dashboard/media` — Supabase Storage browser (upload/delete media assets)
+  - `/dashboard/managers` — manage manager users (filtered `roles: ["manager"]`)
+  - `/dashboard/admins` — manage admin users (filtered `roles: ["admin"]`)
+  - `/dashboard/monitoring` — API request logs (ApiRequestLog collection)
 
 ### Footer (all public pages)
 Logo + numbered social links (`1. EMAIL ↗`, etc.) + copyright + `V#001` version label bottom-right.

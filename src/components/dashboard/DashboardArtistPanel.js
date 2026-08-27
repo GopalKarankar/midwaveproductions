@@ -8,7 +8,7 @@ import { TextareaField } from "@/components/ui/TextareaField";
 import { SelectField } from "@/components/ui/SelectField";
 import { Button } from "@/components/ui/Button";
 
-export function DashboardArtistPanel({ artist, userId }) {
+export function DashboardArtistPanel({ artist, userId, sectionNumber = "1" }) {
   const [formData, setFormData] = useState(
     artist || {
       stageName: "",
@@ -76,7 +76,7 @@ export function DashboardArtistPanel({ artist, userId }) {
   return (
     <div className="px-8 py-12 max-w-2xl">
       <div className="flex items-center gap-3 mb-8">
-        <SectionNumber n="1" />
+        <SectionNumber n={sectionNumber} />
         <SectionHeading className="!text-3xl">Artist Profile</SectionHeading>
       </div>
 

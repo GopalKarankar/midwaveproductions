@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/getSession";
 import dbConnect from "@/lib/mongodb/connect";
 import ApiRequestLog from "@/lib/mongodb/models/ApiRequestLog";
-import { parsePageParams, escapeRegex } from "@/lib/mongodb/queryHelpers";
+import { parsePageParams, escapeRegex, serializeDocs } from "@/lib/mongodb/queryHelpers";
 import { SectionNumber } from "@/components/ui/SectionNumber";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { MonitoringLogsTable } from "@/components/admin/MonitoringLogsTable";
@@ -60,6 +60,8 @@ export default async function MonitoringPage({ searchParams }) {
 
   const errorRate = errorAgg[0]?.total ? Math.round((errorAgg[0].errors / errorAgg[0].total) * 100) : 0;
 
+  const logs = serializeDocs(recentLogs);
+
   const stats = [
     { label: "Requests Today", value: totalToday },
     { label: "Error Rate", value: `${errorRate}%`, highlight: errorRate > 10 },
@@ -115,7 +117,7 @@ export default async function MonitoringPage({ searchParams }) {
         </div>
       )}
 
-      <MonitoringLogsTable logs={recentLogs} page={page} pageSize={pageSize} totalCount={totalCount} sortField={sortField} sortDir={sortDir} />
+      <MonitoringLogsTable logs={logs} page={page} pageSize={pageSize} totalCount={totalCount} sortField={sortField} sortDir={sortDir} />
     </div>
   );
 }

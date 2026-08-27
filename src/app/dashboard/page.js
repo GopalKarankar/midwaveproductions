@@ -20,9 +20,9 @@ export default async function DashboardPage() {
     return null;
   }
 
-  const userRole = profile?.role || "user";
+  const roles = profile?.roles?.length ? profile.roles : ["user"];
 
-  if (userRole === "admin") {
+  if (roles.includes("admin")) {
     await dbConnect();
 
     const [artistCount, bookingCount, userCount, bookingsByStatus] = await Promise.all([
@@ -122,22 +122,36 @@ export default async function DashboardPage() {
     );
   }
 
-  if (userRole === "artist") {
+  if (roles.includes("artist") || roles.includes("manager")) {
     await dbConnect();
-    const artist = await Artist.findOne({ ownerId: session.user.id }).lean();
-    return <DashboardArtistPanel artist={artist} userId={session.user.id} />;
-  }
+    const panels = [];
 
-  if (userRole === "manager") {
-    await dbConnect();
-    const artists = await Artist.find({ managedBy: session.user.id }).lean();
-    const bookings = await Booking.find({
-      artistId: { $in: artists.map((a) => a._id) },
-    })
-      .populate("artistId", "stageName slug")
-      .lean();
+    if (roles.includes("artist")) {
+      const artist = await Artist.findOne({ ownerId: session.user.id }).lean();
+      panels.push(
+        <DashboardArtistPanel key="artist" sectionNumber="1" artist={artist} userId={session.user.id} />
+      );
+    }
 
-    return <DashboardManagerPanel artists={artists} bookings={bookings} />;
+    if (roles.includes("manager")) {
+      const artists = await Artist.find({ managedBy: session.user.id }).lean();
+      const bookings = await Booking.find({
+        artistId: { $in: artists.map((a) => a._id) },
+      })
+        .populate("artistId", "stageName slug")
+        .lean();
+
+      panels.push(
+        <DashboardManagerPanel
+          key="manager"
+          sectionNumber={roles.includes("artist") ? "2" : "1"}
+          artists={artists}
+          bookings={bookings}
+        />
+      );
+    }
+
+    return <div className="flex flex-col">{panels}</div>;
   }
 
   return <DashboardUserPanel />;

@@ -2,7 +2,6 @@
 import { useState, useEffect, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SITEMAP_ENTRIES } from "@/lib/data/sitemapEntries";
-import { socialLinks } from "@/constants/socialLinks";
 import { PillCard } from "@/components/ui/PillCard";
 import { SectionNumber } from "@/components/ui/SectionNumber";
 import { SectionHeading } from "@/components/ui/SectionHeading";
@@ -31,7 +30,7 @@ const fadeScaleVariant = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
 };
 
-export function MobileMenu() {
+export function MobileMenu({ socialLinks = [] }) {
   const [isOpen, setIsOpen] = useState(false);
   const { shouldReduceMotion } = useReducedMotionVariants();
 

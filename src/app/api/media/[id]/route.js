@@ -4,19 +4,25 @@ import MediaAsset from "@/lib/mongodb/models/MediaAsset";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createClient as createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { withApiLog } from "@/lib/monitoring/withApiLog";
 
 const STORAGE_BUCKET = "media";
 
-export async function DELETE(request, { params }) {
+export const DELETE = withApiLog("media-delete", async function DELETE(request, { params, logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'media-delete',
     limit: 20,
     windowMs: 5 * 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
-  const { error } = await requireRole("admin");
+  const { error, session, profile } = await requireRole("admin");
   if (error) return error;
+  logMeta.userId = session.user.id;
+  logMeta.userRoles = profile.roles ?? [];
 
   const { id } = await params;
 
@@ -44,4 +50,4 @@ export async function DELETE(request, { params }) {
     console.error("[ROUTE DELETE /api/media/[id]]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

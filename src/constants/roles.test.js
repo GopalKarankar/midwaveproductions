@@ -15,16 +15,21 @@ describe('Roles', () => {
     expect(ROLE_HIERARCHY.admin).toBe(3)
   })
 
-  it('hasRole() returns true when user role meets or exceeds required role', () => {
-    expect(hasRole('admin', 'user')).toBe(true)
-    expect(hasRole('manager', 'artist')).toBe(true)
-    expect(hasRole('artist', 'artist')).toBe(true)
-    expect(hasRole('artist', 'manager')).toBe(false)
-    expect(hasRole('user', 'admin')).toBe(false)
+  it('hasRole() uses the highest role in the array', () => {
+    expect(hasRole(['admin'], 'user')).toBe(true)
+    expect(hasRole(['artist', 'manager'], 'artist')).toBe(true)
+    expect(hasRole(['artist', 'manager'], 'admin')).toBe(false)
+    expect(hasRole(['artist'], 'manager')).toBe(false)
+    expect(hasRole(['user'], 'admin')).toBe(false)
   })
 
-  it('hasRole() handles undefined roles gracefully', () => {
+  it('hasRole() treats multiple independent roles as cumulative for threshold checks', () => {
+    expect(hasRole(['artist', 'manager'], 'manager')).toBe(true)
+  })
+
+  it('hasRole() handles empty/undefined/non-array input gracefully', () => {
     expect(hasRole(undefined, 'user')).toBe(false)
-    expect(hasRole('admin', undefined)).toBe(false)
+    expect(hasRole([], 'user')).toBe(false)
+    expect(hasRole(['admin'], undefined)).toBe(false)
   })
 })

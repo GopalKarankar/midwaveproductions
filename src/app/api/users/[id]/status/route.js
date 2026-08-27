@@ -4,17 +4,23 @@ import User from "@/lib/mongodb/models/User";
 import { requireRole } from "@/lib/auth/requireRole";
 import { ROLES } from "@/constants/roles";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { withApiLog } from "@/lib/monitoring/withApiLog";
 
-export async function PATCH(request, { params }) {
+export const PATCH = withApiLog("users-status", async function PATCH(request, { params, logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'users-status',
     limit: 20,
     windowMs: 5 * 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
-  const { error, session } = await requireRole("admin");
+  const { error, session, profile } = await requireRole("admin");
   if (error) return error;
+  logMeta.userId = session.user.id;
+  logMeta.userRoles = profile.roles ?? [];
 
   const { id } = await params;
 
@@ -42,8 +48,8 @@ export async function PATCH(request, { params }) {
     }
 
     // Prevent blocking the last remaining admin
-    if (user.role === "admin" && isBlocked === true) {
-      const unblocked_admin_count = await User.countDocuments({ role: "admin", isBlocked: false });
+    if (user.roles.includes("admin") && isBlocked === true) {
+      const unblocked_admin_count = await User.countDocuments({ roles: "admin", isBlocked: false });
       if (unblocked_admin_count <= 1) {
         return NextResponse.json(
           { error: "Cannot block the last remaining admin." },
@@ -72,4 +78,4 @@ export async function PATCH(request, { params }) {
     console.error("[ROUTE PATCH /api/users/[id]/status]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

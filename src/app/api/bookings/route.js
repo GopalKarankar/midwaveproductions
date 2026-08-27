@@ -6,6 +6,7 @@ import Artist from "@/lib/mongodb/models/Artist";
 import { requireRole } from "@/lib/auth/requireRole";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { sendBookingConfirmationEmail } from "@/lib/email/resend";
+import { withApiLog } from "@/lib/monitoring/withApiLog";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EVENT_TYPES = [
@@ -18,9 +19,11 @@ const EVENT_TYPES = [
 ];
 
 // GET /api/bookings — admin only
-export async function GET() {
-  const { error } = await requireRole("admin");
+export const GET = withApiLog("bookings-list", async function GET(_request, { logMeta }) {
+  const { error, session, profile } = await requireRole("admin");
   if (error) return error;
+  logMeta.userId = session.user.id;
+  logMeta.userRoles = profile.roles ?? [];
 
   try {
     await dbConnect();
@@ -34,12 +37,15 @@ export async function GET() {
     console.error("[ROUTE GET /api/bookings]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});
 
 // POST /api/bookings — public
-export async function POST(request) {
+export const POST = withApiLog("bookings", async function POST(request, { logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, { routeKey: "bookings" });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
   try {
     const body = await request.json();
@@ -111,4 +117,4 @@ export async function POST(request) {
     console.error("[ROUTE POST /api/bookings]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

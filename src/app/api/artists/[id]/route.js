@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth/getSession";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createClient as createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
+import { withApiLog } from "@/lib/monitoring/withApiLog";
 
 const PUBLIC_EXCLUDE = "-pressKit -managedBy -ownerId -__v";
 
@@ -14,13 +15,16 @@ const PUBLIC_EXCLUDE = "-pressKit -managedBy -ownerId -__v";
 const ADMIN_ONLY_FIELDS = ["isPublished", "isFeatured", "managedBy", "ownerId"];
 
 // GET /api/artists/[id] — public
-export async function GET(request, { params }) {
+export const GET = withApiLog("artists-detail", async function GET(request, { params, logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'artists-detail',
     limit: 30,
     windowMs: 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
   const { id } = await params;
 
@@ -38,16 +42,19 @@ export async function GET(request, { params }) {
     console.error("[ROUTE GET /api/artists/[id]]", err);
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-}
+});
 
 // PATCH /api/artists/[id] — owner, manager, or admin
-export async function PATCH(request, { params }) {
+export const PATCH = withApiLog("artists-update", async function PATCH(request, { params, logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'artists-update',
     limit: 20,
     windowMs: 5 * 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
   const { id } = await params;
   const { session, profile } = await getSession();
@@ -55,6 +62,8 @@ export async function PATCH(request, { params }) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  logMeta.userId = session.user.id;
+  logMeta.userRoles = profile?.roles ?? [];
 
   try {
     await dbConnect();
@@ -62,7 +71,7 @@ export async function PATCH(request, { params }) {
     if (!artist) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const isOwner = artist.ownerId === session.user.id;
-    const isPrivileged = ["manager", "admin"].includes(profile?.role);
+    const isPrivileged = profile?.roles?.some((r) => ["manager", "admin"].includes(r));
 
     if (!isOwner && !isPrivileged) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -70,7 +79,7 @@ export async function PATCH(request, { params }) {
 
     const body = await request.json();
 
-    if (profile?.role !== "admin") {
+    if (!profile?.roles?.includes("admin")) {
       for (const field of ADMIN_ONLY_FIELDS) delete body[field];
     }
 
@@ -84,19 +93,24 @@ export async function PATCH(request, { params }) {
     console.error("[ROUTE PATCH /api/artists/[id]]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});
 
 // DELETE /api/artists/[id] — admin only
-export async function DELETE(request, { params }) {
+export const DELETE = withApiLog("artists-delete", async function DELETE(request, { params, logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'artists-delete',
     limit: 20,
     windowMs: 5 * 60 * 1000,
   });
-  if (!allowed) return rateLimitResponse(retryAfter);
+  if (!allowed) {
+    logMeta.rateLimited = true;
+    return rateLimitResponse(retryAfter);
+  }
 
-  const { error } = await requireRole("admin");
+  const { error, session, profile } = await requireRole("admin");
   if (error) return error;
+  logMeta.userId = session.user.id;
+  logMeta.userRoles = profile.roles ?? [];
 
   const { id } = await params;
 
@@ -129,4 +143,4 @@ export async function DELETE(request, { params }) {
     console.error("[ROUTE DELETE /api/artists/[id]]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});
