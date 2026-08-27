@@ -4,6 +4,7 @@ import dbConnect from "@/lib/mongodb/connect";
 import Artist from "@/lib/mongodb/models/Artist";
 import User from "@/lib/mongodb/models/User";
 import { ROLES } from "@/constants/roles";
+import { parsePageParams, escapeRegex } from "@/lib/mongodb/queryHelpers";
 import { SectionNumber } from "@/components/ui/SectionNumber";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ArtistsAdminTable } from "@/components/admin/ArtistsAdminTable";
@@ -14,7 +15,7 @@ export const metadata = {
   title: "Manage Artists - Midwave Productions",
 };
 
-export default async function AdminArtistsPage() {
+export default async function AdminArtistsPage({ searchParams }) {
   const { session, profile } = await getSession();
 
   if (!session) {
@@ -24,12 +25,33 @@ export default async function AdminArtistsPage() {
   await dbConnect();
 
   // Admin: show all artists in admin console
-  if (profile?.role === "admin") {
-    const artistUsers = await User.find({ role: ROLES.ARTIST })
-      .select("email name picture role isBlocked blockedAt blockedBy blockReason createdAt devices")
-      .populate("blockedBy", "email name")
-      .sort({ createdAt: -1 })
-      .lean();
+  if (profile?.roles?.includes("admin")) {
+    const params = await searchParams;
+    const { page, pageSize, skip, limit, sort } = parsePageParams(params, {
+      defaultPageSize: 20,
+      allowedSort: ["email", "name", "createdAt"],
+      defaultSort: "createdAt",
+    });
+
+    const searchTerm = params.q || "";
+    const regex = searchTerm ? new RegExp(escapeRegex(searchTerm), "i") : null;
+    const filter = {
+      roles: ROLES.ARTIST,
+      ...(regex && {
+        $or: [{ email: regex }, { name: regex }],
+      }),
+    };
+
+    const [artistUsers, totalCount] = await Promise.all([
+      User.find(filter)
+        .select("email name picture roles isBlocked blockedAt blockedBy blockReason createdAt devices")
+        .populate("blockedBy", "email name")
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(filter),
+    ]);
 
     const userIds = artistUsers.map((u) => u._id.toString());
     const artistDocs = await Artist.find({ ownerId: { $in: userIds } })
@@ -56,13 +78,19 @@ export default async function AdminArtistsPage() {
           <SectionNumber n="2" />
           <SectionHeading className="!text-3xl">Artists</SectionHeading>
         </div>
-        <ArtistsAdminTable users={usersWithDevices} currentUserId={session?.user?.id} />
+        <ArtistsAdminTable
+          users={usersWithDevices}
+          currentUserId={session?.user?.id}
+          page={page}
+          pageSize={pageSize}
+          totalCount={totalCount}
+        />
       </div>
     );
   }
 
-  // Artist: show their own profile panel
-  if (profile?.role === "artist") {
+  // Artist (non-admin): show their own profile panel
+  if (profile?.roles?.includes("artist")) {
     const artist = await Artist.findOne({ ownerId: session.user.id }).lean();
     return <DashboardArtistPanel artist={artist} userId={session.user.id} />;
   }

@@ -9,10 +9,10 @@ import { UsersAdminTable } from "@/components/admin/UsersAdminTable";
 import { parseUserAgent } from "@/lib/utils/parseUserAgent";
 
 export const metadata = {
-  title: "Manage Users - Midwave Productions",
+  title: "Manage Admins - Midwave Productions",
 };
 
-export default async function AdminUsersPage({ searchParams }) {
+export default async function AdminsPage({ searchParams }) {
   const { session, profile } = await getSession();
 
   if (!session || !profile?.roles?.includes("admin")) {
@@ -30,11 +30,12 @@ export default async function AdminUsersPage({ searchParams }) {
 
   const searchTerm = params.q || "";
   const regex = searchTerm ? new RegExp(escapeRegex(searchTerm), "i") : null;
-  const filter = regex
-    ? {
-        $or: [{ email: regex }, { name: regex }],
-      }
-    : {};
+  const filter = {
+    roles: "admin",
+    ...(regex && {
+      $or: [{ email: regex }, { name: regex }],
+    }),
+  };
 
   const [users, totalCount] = await Promise.all([
     User.find(filter)
@@ -62,8 +63,8 @@ export default async function AdminUsersPage({ searchParams }) {
   return (
     <div className="px-8 py-12">
       <div className="flex items-center gap-3 mb-8">
-        <SectionNumber n="4" />
-        <SectionHeading className="!text-3xl">Users</SectionHeading>
+        <SectionNumber n="7" />
+        <SectionHeading className="!text-3xl">Admins</SectionHeading>
       </div>
 
       <UsersAdminTable
