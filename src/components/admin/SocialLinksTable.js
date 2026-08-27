@@ -8,14 +8,7 @@ import { SOCIAL_PLATFORMS } from "@/constants/socialPlatforms";
 
 const columnHelper = createColumnHelper();
 
-function createSocialColumns({
-  values,
-  savedValues,
-  updatingKey,
-  savedFlashKey,
-  onChange,
-  onSave,
-}) {
+function createSocialColumns() {
   return [
     columnHelper.display({
       id: "label",
@@ -35,6 +28,7 @@ function createSocialColumns({
       cell: (info) => {
         const platform = info.row.original;
         const key = platform.key;
+        const { values, updatingKey, onChange } = info.table.options.meta;
         return (
           <input
             type="text"
@@ -53,6 +47,7 @@ function createSocialColumns({
       cell: (info) => {
         const platform = info.row.original;
         const key = platform.key;
+        const { savedValues } = info.table.options.meta;
         const isSaved = !!savedValues[key];
         return (
           <Badge variant={isSaved ? "blue" : "muted"}>
@@ -67,6 +62,7 @@ function createSocialColumns({
       cell: (info) => {
         const platform = info.row.original;
         const key = platform.key;
+        const { values, savedValues, updatingKey, savedFlashKey, onSave } = info.table.options.meta;
         const isUpdating = updatingKey === key;
         const isSaved = savedFlashKey === key;
         const isDirty = values[key] !== savedValues[key];
@@ -160,23 +156,20 @@ export function SocialLinksTable({ initialLinks = {} }) {
     []
   );
 
-  const columns = useMemo(
-    () =>
-      createSocialColumns({
-        values,
-        savedValues,
-        updatingKey,
-        savedFlashKey,
-        onChange: handleChange,
-        onSave: saveOne,
-      }),
-    [values, savedValues, updatingKey, savedFlashKey]
-  );
+  const columns = useMemo(() => createSocialColumns(), []);
 
   const table = useReactTable({
     data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    meta: {
+      values,
+      savedValues,
+      updatingKey,
+      savedFlashKey,
+      onChange: handleChange,
+      onSave: saveOne,
+    },
   });
 
   return (
