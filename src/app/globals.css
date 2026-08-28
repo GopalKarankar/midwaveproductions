@@ -80,6 +80,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Native select/option dark rendering (Chrome/Edge default to a white
+   popup panel unless the page opts into dark UA rendering) ── */
+select {
+  color-scheme: dark;
+}
+select option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
 /* ── Scrollbar suppression for drag carousels ── */
 .scrollbar-none { scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
