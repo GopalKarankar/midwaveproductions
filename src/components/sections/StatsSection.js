@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useInView, animate } from "framer-motion";
-import { placeholderStats } from "@/lib/data/placeholderStats";
 import { useReducedMotionVariants } from "@/hooks/useReducedMotion";
 
 function Counter({ value, suffix }) {
@@ -34,10 +33,10 @@ function Counter({ value, suffix }) {
 }
 
 // N°5 — Stats
-export function StatsSection() {
+export function StatsSection({ stats = [] }) {
   return (
     <section className="px-6 md:px-12 py-24 grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-      {placeholderStats.map((stat) => (
+      {stats.map((stat) => (
         <div key={stat.label} className="flex flex-col items-center gap-2">
           <Counter value={stat.value} suffix={stat.suffix} />
           <span className="font-mono text-xs text-accent-2 tracking-widest uppercase">

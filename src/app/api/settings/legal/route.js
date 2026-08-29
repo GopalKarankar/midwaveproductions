@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import dbConnect from "@/lib/mongodb/connect";
 import SiteSettings from "@/lib/mongodb/models/SiteSettings";
+import { sanitizeRichText } from "@/lib/utils/sanitizeRichText";
 import { requireRole } from "@/lib/auth/requireRole";
 import { LEGAL_PAGE_KEYS } from "@/constants/legalPages";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
@@ -30,7 +31,7 @@ export const PATCH = withApiLog("settings-legal", async function PATCH(request, 
     for (const key of Object.keys(body)) {
       if (!LEGAL_PAGE_KEYS.includes(key)) continue;
       const value = body[key];
-      setOps[`legalPages.${key}`] = typeof value === "string" ? value.trim() : "";
+      setOps[`legalPages.${key}`] = typeof value === "string" ? sanitizeRichText(value.trim()) : "";
     }
     if (Object.keys(setOps).length === 0) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });

@@ -6,12 +6,11 @@ import { Badge } from "@/components/ui/Badge";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { HorizontalDragCarousel } from "@/components/ui/HorizontalDragCarousel";
 import { ArtistCard } from "@/components/ui/ArtistCard";
-import { placeholderArtists } from "@/lib/data/placeholderArtists";
 import { staggerContainer } from "@/lib/motion/variants";
 import { useReducedMotionVariants } from "@/hooks/useReducedMotion";
 
 // N°3 — Featured Artists (horizontal drag carousel)
-export function FeaturedArtistsSection() {
+export function FeaturedArtistsSection({ artists = [] }) {
   const { fadeInUp } = useReducedMotionVariants();
 
   return (
@@ -33,8 +32,8 @@ export function FeaturedArtistsSection() {
       </motion.div>
 
       <HorizontalDragCarousel>
-        {placeholderArtists.map((artist) => (
-          <ArtistCard key={artist.id} artist={artist} />
+        {artists.map((artist) => (
+          <ArtistCard key={artist._id || artist.slug} artist={artist} />
         ))}
       </HorizontalDragCarousel>
 

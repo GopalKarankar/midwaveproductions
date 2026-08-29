@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useReactTable, getCoreRowModel, getExpandedRowModel, createColumnHelper } from "@tanstack/react-table";
 import { useTableQueryState } from "@/hooks/useTableQueryState";
 import { DataTable } from "@/components/ui/DataTable";
@@ -8,6 +9,7 @@ import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { TableSearchInput } from "@/components/ui/TableSearchInput";
 import { Badge } from "@/components/ui/Badge";
 import { RoleCheckboxGroup } from "@/components/ui/RoleCheckboxGroup";
+import { FilterTabs } from "@/components/ui/FilterTabs";
 
 const columnHelper = createColumnHelper();
 
@@ -172,7 +174,9 @@ export function ArtistsAdminTable({ users, currentUserId, page, pageSize, totalC
   const [errorMessage, setErrorMessage] = useState("");
   const [expandedRows, setExpandedRows] = useState(new Set());
   const { q, setParams, isPending } = useTableQueryState();
+  const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(q);
+  const status = searchParams.get('status') || 'all';
 
   // Resync when prop data changes
   useEffect(() => {
@@ -336,14 +340,28 @@ export function ArtistsAdminTable({ users, currentUserId, page, pageSize, totalC
     getExpandedRowModel: getExpandedRowModel(),
   });
 
+  const statusOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'active', label: 'Active' },
+    { value: 'blocked', label: 'Blocked' },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <TableSearchInput
-        value={searchValue}
-        onChange={setSearchValue}
-        onSearch={(v) => setParams({ q: v })}
-        placeholder="Search by email or name..."
-      />
+      <div className="flex flex-col gap-3">
+        <TableSearchInput
+          value={searchValue}
+          onChange={setSearchValue}
+          onSearch={(v) => setParams({ q: v })}
+          placeholder="Search by email or name..."
+        />
+
+        <FilterTabs
+          options={statusOptions}
+          active={status}
+          onChange={(value) => setParams({ status: value })}
+        />
+      </div>
 
       {errorMessage && (
         <p className="font-mono text-xs text-error tracking-widest uppercase">{errorMessage}</p>

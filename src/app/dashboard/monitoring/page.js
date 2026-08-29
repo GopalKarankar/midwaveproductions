@@ -26,11 +26,14 @@ export default async function MonitoringPage({ searchParams }) {
 
   const searchTerm = params.q || "";
   const regex = searchTerm ? new RegExp(escapeRegex(searchTerm), "i") : null;
-  const filter = regex
-    ? {
-        $or: [{ ip: regex }, { path: regex }],
-      }
-    : {};
+  const method = params.method || 'all';
+  const role = params.role || 'all';
+
+  const filter = {
+    ...(regex && { $or: [{ ip: regex }, { path: regex }] }),
+    ...(method !== 'all' && method && { method }),
+    ...(role !== 'all' && role && { userRole: role === 'system' ? null : role }),
+  };
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);

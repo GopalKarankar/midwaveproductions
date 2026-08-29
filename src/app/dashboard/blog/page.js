@@ -29,19 +29,24 @@ export default async function DashboardBlogPage({ searchParams }) {
 
   const searchTerm = params.q || "";
   const regex = searchTerm ? new RegExp(escapeRegex(searchTerm), "i") : null;
-  const filter = regex
-    ? {
-        $or: [{ title: regex }, { excerpt: regex }],
-      }
-    : {};
+  const status = params.status || 'all';
+  const tag = params.tag || 'all';
 
-  const [posts, totalCount] = await Promise.all([
+  const filter = {
+    ...(regex && { $or: [{ title: regex }, { excerpt: regex }] }),
+    ...(status === 'published' && { isPublished: true }),
+    ...(status === 'draft' && { isPublished: false }),
+    ...(tag !== 'all' && tag && { tags: tag }),
+  };
+
+  const [posts, totalCount, distinctTagsRaw] = await Promise.all([
     BlogPost.find(filter)
       .sort(sort)
       .skip(skip)
       .limit(limit)
       .lean(),
     BlogPost.countDocuments(filter),
+    BlogPost.distinct('tags'),
   ]);
 
   const serialized = serializeDocs(posts);
@@ -57,6 +62,7 @@ export default async function DashboardBlogPage({ searchParams }) {
         page={page}
         pageSize={pageSize}
         totalCount={totalCount}
+        distinctTags={distinctTagsRaw || []}
       />
     </div>
   );

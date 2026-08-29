@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb/connect";
 import BlogPost from "@/lib/mongodb/models/BlogPost";
 import { slugify } from "@/lib/utils/slugify";
+import { sanitizeRichText } from "@/lib/utils/sanitizeRichText";
 import { requireRole } from "@/lib/auth/requireRole";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { withApiLog } from "@/lib/monitoring/withApiLog";
@@ -67,7 +68,7 @@ export const POST = withApiLog("blog-create", async function POST(request, { log
       title: body.title.trim(),
       slug,
       excerpt: body.excerpt?.trim(),
-      body: body.body,
+      body: sanitizeRichText(body.body),
       coverImage: body.coverImage,
       tags: Array.isArray(body.tags)
         ? body.tags.map((t) => String(t).trim().toLowerCase()).filter(Boolean)

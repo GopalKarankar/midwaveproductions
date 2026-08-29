@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useReactTable, getCoreRowModel, getExpandedRowModel, createColumnHelper } from "@tanstack/react-table";
 import { useTableQueryState } from "@/hooks/useTableQueryState";
 import { DataTable } from "@/components/ui/DataTable";
@@ -8,6 +9,9 @@ import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { TableSearchInput } from "@/components/ui/TableSearchInput";
 import { Badge } from "@/components/ui/Badge";
 import { RoleCheckboxGroup } from "@/components/ui/RoleCheckboxGroup";
+import { FilterTabs } from "@/components/ui/FilterTabs";
+import { SelectField } from "@/components/ui/SelectField";
+import { ROLES } from "@/constants/roles";
 
 const columnHelper = createColumnHelper();
 
@@ -164,7 +168,7 @@ function createUserColumns({
   ];
 }
 
-export function UsersAdminTable({ users, currentUserId, page, pageSize, totalCount }) {
+export function UsersAdminTable({ users, currentUserId, page, pageSize, totalCount, showRoleFilter = true }) {
   const [localUsers, setLocalUsers] = useState(users);
   const [updatingId, setUpdatingId] = useState(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
@@ -172,7 +176,10 @@ export function UsersAdminTable({ users, currentUserId, page, pageSize, totalCou
   const [errorMessage, setErrorMessage] = useState("");
   const [expandedRows, setExpandedRows] = useState(new Set());
   const { q, setParams, isPending } = useTableQueryState();
+  const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(q);
+  const status = searchParams.get('status') || 'all';
+  const role = searchParams.get('role') || 'all';
 
   // Resync when prop data changes
   useEffect(() => {
@@ -329,14 +336,46 @@ export function UsersAdminTable({ users, currentUserId, page, pageSize, totalCou
     getExpandedRowModel: getExpandedRowModel(),
   });
 
+  const statusOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'active', label: 'Active' },
+    { value: 'blocked', label: 'Blocked' },
+  ];
+
+  const roleOptions = [
+    { value: 'all', label: 'All' },
+    { value: ROLES.USER, label: 'User' },
+    { value: ROLES.ARTIST, label: 'Artist' },
+    { value: ROLES.MANAGER, label: 'Manager' },
+    { value: ROLES.ADMIN, label: 'Admin' },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <TableSearchInput
-        value={searchValue}
-        onChange={setSearchValue}
-        onSearch={(v) => setParams({ q: v })}
-        placeholder="Search by email or name..."
-      />
+      <div className="flex flex-col gap-3">
+        <TableSearchInput
+          value={searchValue}
+          onChange={setSearchValue}
+          onSearch={(v) => setParams({ q: v })}
+          placeholder="Search by email or name..."
+        />
+
+        <FilterTabs
+          options={statusOptions}
+          active={status}
+          onChange={(value) => setParams({ status: value })}
+        />
+
+        {showRoleFilter && (
+          <SelectField
+            id="role-filter"
+            label="Filter by Role"
+            options={roleOptions}
+            value={role}
+            onChange={(e) => setParams({ role: e.target.value })}
+          />
+        )}
+      </div>
 
       {errorMessage && (
         <p className="font-mono text-xs text-error tracking-widest uppercase">{errorMessage}</p>

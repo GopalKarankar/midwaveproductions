@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useReactTable, getCoreRowModel, createColumnHelper } from "@tanstack/react-table";
 import { useTableQueryState } from "@/hooks/useTableQueryState";
 import { DataTable } from "@/components/ui/DataTable";
@@ -8,6 +9,9 @@ import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { TableSearchInput } from "@/components/ui/TableSearchInput";
 import { DataTableSortHeader } from "@/components/ui/DataTableSortHeader";
 import { Badge } from "@/components/ui/Badge";
+import { FilterTabs } from "@/components/ui/FilterTabs";
+import { SelectField } from "@/components/ui/SelectField";
+import { ROLES } from "@/constants/roles";
 
 const columnHelper = createColumnHelper();
 
@@ -82,10 +86,15 @@ function createLogColumns() {
   ];
 }
 
+const METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE"];
+
 export function MonitoringLogsTable({ logs, page, pageSize, totalCount, sortField, sortDir }) {
   const [localLogs, setLocalLogs] = useState(logs);
   const { q, setParams, isPending } = useTableQueryState();
+  const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(q);
+  const method = searchParams.get('method') || 'all';
+  const role = searchParams.get('role') || 'all';
 
   // Resync when prop data changes
   useEffect(() => {
@@ -117,14 +126,44 @@ export function MonitoringLogsTable({ logs, page, pageSize, totalCount, sortFiel
     getCoreRowModel: getCoreRowModel(),
   });
 
+  const methodOptions = [
+    { value: 'all', label: 'All' },
+    ...METHODS.map((m) => ({ value: m, label: m })),
+  ];
+
+  const roleOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'system', label: 'System' },
+    { value: ROLES.USER, label: 'User' },
+    { value: ROLES.ARTIST, label: 'Artist' },
+    { value: ROLES.MANAGER, label: 'Manager' },
+    { value: ROLES.ADMIN, label: 'Admin' },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      <TableSearchInput
-        value={searchValue}
-        onChange={setSearchValue}
-        onSearch={(v) => setParams({ q: v })}
-        placeholder="Search by IP or path..."
-      />
+      <div className="flex flex-col gap-3">
+        <TableSearchInput
+          value={searchValue}
+          onChange={setSearchValue}
+          onSearch={(v) => setParams({ q: v })}
+          placeholder="Search by IP or path..."
+        />
+
+        <FilterTabs
+          options={methodOptions}
+          active={method}
+          onChange={(value) => setParams({ method: value })}
+        />
+
+        <SelectField
+          id="role-filter"
+          label="Filter by Role"
+          options={roleOptions}
+          value={role}
+          onChange={(e) => setParams({ role: e.target.value })}
+        />
+      </div>
 
       <DataTable table={table} isPending={isPending} emptyMessage="No API requests found." />
 

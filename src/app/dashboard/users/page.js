@@ -30,11 +30,15 @@ export default async function AdminUsersPage({ searchParams }) {
 
   const searchTerm = params.q || "";
   const regex = searchTerm ? new RegExp(escapeRegex(searchTerm), "i") : null;
-  const filter = regex
-    ? {
-        $or: [{ email: regex }, { name: regex }],
-      }
-    : {};
+  const status = params.status || 'all';
+  const role = params.role || 'all';
+
+  const filter = {
+    ...(regex && { $or: [{ email: regex }, { name: regex }] }),
+    ...(status === 'blocked' && { isBlocked: true }),
+    ...(status === 'active' && { isBlocked: false }),
+    ...(role !== 'all' && { roles: role }),
+  };
 
   const [users, totalCount] = await Promise.all([
     User.find(filter)

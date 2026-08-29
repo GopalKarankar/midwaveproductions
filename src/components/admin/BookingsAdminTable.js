@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useReactTable, getCoreRowModel, getExpandedRowModel, createColumnHelper } from "@tanstack/react-table";
 import { useTableQueryState } from "@/hooks/useTableQueryState";
 import { DataTable } from "@/components/ui/DataTable";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { Badge } from "@/components/ui/Badge";
+import { FilterTabs } from "@/components/ui/FilterTabs";
+import { SelectField } from "@/components/ui/SelectField";
 
 const STATUSES = ["pending", "reviewing", "approved", "rejected", "cancelled"];
 
@@ -19,7 +22,7 @@ const STATUS_COLORS = {
 
 const columnHelper = createColumnHelper();
 
-function createBookingColumns({ onStatusChange, updatingId, errorMessage }) {
+function createBookingColumns() {
   return [
     columnHelper.accessor("requesterName", {
       id: "requesterName",
@@ -36,12 +39,49 @@ function createBookingColumns({ onStatusChange, updatingId, errorMessage }) {
       header: "Event Type",
       cell: (info) => <span className="font-body text-muted text-xs capitalize">{info.getValue()}</span>,
     }),
+    columnHelper.accessor("message", {
+      id: "message",
+      header: "Message",
+      cell: (info) => {
+        const msg = info.getValue();
+        const truncated = msg && msg.length > 50 ? msg.substring(0, 50) + "…" : msg || "—";
+        return (
+          <span className="font-body text-muted text-xs" title={msg || ""}>
+            {truncated}
+          </span>
+        );
+      },
+    }),
+    columnHelper.accessor("adminNotes", {
+      id: "adminNotes",
+      header: "Admin Notes",
+      cell: (info) => {
+        const bookingId = info.row.original._id;
+        const { notesDraft, onNotesChange, onNotesSave, savingNotesId } = info.table.options.meta;
+        const value = notesDraft[bookingId] || "";
+        const isSaving = savingNotesId === bookingId;
+
+        return (
+          <textarea
+            value={value}
+            onChange={(e) => onNotesChange(bookingId, e.target.value)}
+            onBlur={() => onNotesSave(bookingId)}
+            disabled={isSaving}
+            maxLength={2000}
+            rows={2}
+            placeholder="Internal notes..."
+            className="bg-transparent border-0 border-b border-border text-text font-body py-1 text-xs focus:outline-none focus:border-accent transition-colors duration-200 placeholder:text-muted w-full resize-none disabled:opacity-50"
+          />
+        );
+      },
+    }),
     columnHelper.accessor("status", {
       id: "status",
       header: "Status",
       cell: (info) => {
         const bookingId = info.row.original._id;
         const currentStatus = info.getValue();
+        const { updatingId, onStatusChange } = info.table.options.meta;
         const isUpdating = updatingId === bookingId;
 
         return (
@@ -80,15 +120,25 @@ function createBookingColumns({ onStatusChange, updatingId, errorMessage }) {
   ];
 }
 
+const EVENT_TYPES = ["concert", "festival", "private_event", "corporate", "collaboration", "other"];
+
 export function BookingsAdminTable({ bookings, page, pageSize, totalCount, statusCounts }) {
   const [localBookings, setLocalBookings] = useState(bookings);
   const [updatingId, setUpdatingId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [notesDraft, setNotesDraft] = useState({});
+  const [savingNotesId, setSavingNotesId] = useState(null);
   const { status, setParams, isPending } = useTableQueryState();
+  const searchParams = useSearchParams();
+  const eventType = searchParams.get('eventType') || 'all';
 
   // Resync when prop data changes
   useEffect(() => {
     setLocalBookings(bookings);
+    setNotesDraft(bookings.reduce((acc, b) => {
+      acc[b._id] = b.adminNotes || "";
+      return acc;
+    }, {}));
   }, [bookings]);
 
   const activeTab = status === "all" ? "all" : status;
@@ -125,10 +175,46 @@ export function BookingsAdminTable({ bookings, page, pageSize, totalCount, statu
     }
   };
 
-  const columns = useMemo(
-    () => createBookingColumns({ onStatusChange: updateStatus, updatingId, errorMessage }),
-    [updatingId, errorMessage]
-  );
+  const saveAdminNotes = async (bookingId) => {
+    const currentNotes = notesDraft[bookingId] || "";
+    const currentBooking = localBookings.find((b) => b._id === bookingId);
+    const savedNotes = currentBooking.adminNotes || "";
+
+    if (currentNotes === savedNotes) return;
+
+    setSavingNotesId(bookingId);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adminNotes: currentNotes }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setErrorMessage(data.error || "Failed to update notes");
+        return;
+      }
+
+      const { booking } = await response.json();
+      setLocalBookings((prev) =>
+        prev.map((b) => (b._id === bookingId ? booking : b))
+      );
+      setNotesDraft((prev) => ({
+        ...prev,
+        [bookingId]: booking.adminNotes || "",
+      }));
+    } catch (err) {
+      console.error("Error updating notes:", err);
+      setErrorMessage("Failed to update notes");
+    } finally {
+      setSavingNotesId(null);
+    }
+  };
+
+  const columns = useMemo(() => createBookingColumns(), []);
 
   const table = useReactTable({
     data: localBookings,
@@ -144,24 +230,43 @@ export function BookingsAdminTable({ bookings, page, pageSize, totalCount, statu
     },
     getCoreRowModel: getCoreRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
+    meta: {
+      updatingId,
+      onStatusChange: updateStatus,
+      notesDraft,
+      onNotesChange: (id, value) => setNotesDraft((prev) => ({ ...prev, [id]: value })),
+      onNotesSave: saveAdminNotes,
+      savingNotesId,
+    },
   });
+
+  const statusOptions = [
+    { value: 'all', label: 'All' },
+    ...STATUSES.map((s) => ({ value: s, label: s })),
+  ];
+
+  const eventTypeOptions = [
+    { value: 'all', label: 'All' },
+    ...EVENT_TYPES.map((t) => ({ value: t, label: t.replace(/_/g, ' ').toUpperCase() })),
+  ];
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-2 flex-wrap">
-        {["all", ...STATUSES].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setParams({ status: tab === "all" ? "all" : tab })}
-            className={`px-3 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${
-              activeTab === tab
-                ? "text-accent-2 border-b-2 border-accent-2"
-                : "text-muted hover:text-highlight border-b-2 border-transparent"
-            }`}
-          >
-            {tab === "all" ? "All" : tab} ({statusCounts[tab] || 0})
-          </button>
-        ))}
+      <div className="flex flex-col gap-3">
+        <FilterTabs
+          options={statusOptions}
+          active={activeTab}
+          onChange={(value) => setParams({ status: value })}
+          counts={statusCounts}
+        />
+
+        <SelectField
+          id="eventtype-filter"
+          label="Filter by Event Type"
+          options={eventTypeOptions}
+          value={eventType}
+          onChange={(e) => setParams({ eventType: e.target.value })}
+        />
       </div>
 
       {errorMessage && (

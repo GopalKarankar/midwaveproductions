@@ -30,6 +30,8 @@ const fadeScaleVariant = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
 };
 
+const navLinkClass = "flex items-center gap-[clamp(0.4rem,2vw,0.75rem)] py-[clamp(0.25rem,1.4dvh,0.75rem)] border-b border-border hover:text-accent transition-colors duration-200 min-w-0";
+
 export function MobileMenu({ socialLinks = [] }) {
   const [isOpen, setIsOpen] = useState(false);
   const { shouldReduceMotion } = useReducedMotionVariants();
@@ -108,7 +110,7 @@ export function MobileMenu({ socialLinks = [] }) {
             transition={{ duration: 0.3 }}
           >
             <motion.div
-              className="w-full h-full flex flex-col md:flex-row relative"
+              className="w-full h-full flex flex-row relative"
               variants={staggerContainer}
               initial="hidden"
               animate="visible"
@@ -117,13 +119,13 @@ export function MobileMenu({ socialLinks = [] }) {
               {/* Left panel — navigation */}
               <motion.nav
                 variants={reducedSlideInLeft}
-                className="flex-1 flex flex-col justify-between border-r border-border px-6 py-8 overflow-y-auto scrollbar-none min-w-0"
+                className="flex-1 flex flex-col justify-between border-r border-border px-[clamp(1rem,5vw,1.5rem)] py-[clamp(0.75rem,4dvh,2rem)] overflow-y-auto scrollbar-none min-w-0 min-h-0"
               >
                 <div>
-                  <h2 className="font-display text-xl uppercase text-accent mb-8 tracking-display">
+                  <h2 className="font-display text-[clamp(0.9rem,3.5dvh,1.25rem)] uppercase text-accent mb-[clamp(0.5rem,2.5dvh,2rem)] tracking-display">
                     NAVIGATION
                   </h2>
-                  <div className="mb-8 min-[489px]:hidden">
+                  <div className="mb-[clamp(0.5rem,2.5dvh,2rem)] min-[489px]:hidden">
                     <UserMenu className="w-full justify-center border-accent" />
                   </div>
                   <ul className="space-y-0">
@@ -132,12 +134,12 @@ export function MobileMenu({ socialLinks = [] }) {
                       <a
                         href="/"
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-3 py-3 border-b border-border hover:text-accent transition-colors duration-200"
+                        className={navLinkClass}
                       >
-                        <span className="font-mono text-accent-2 text-xs tracking-widest">
+                        <span className="font-mono text-accent-2 text-[clamp(0.55rem,1.6dvh,0.75rem)] tracking-widest">
                           N°0
                         </span>
-                        <span className="font-display uppercase text-highlight tracking-display">
+                        <span className="font-display uppercase text-highlight text-[clamp(0.8rem,2.4dvh,1rem)] tracking-display">
                           Home
                         </span>
                       </a>
@@ -148,16 +150,16 @@ export function MobileMenu({ socialLinks = [] }) {
                         <a
                           href={entry.href}
                           onClick={() => setIsOpen(false)}
-                          className="flex items-center gap-3 py-3 border-b border-border hover:text-accent transition-colors duration-200"
+                          className={navLinkClass}
                         >
-                          <span className="font-mono text-accent-2 text-xs tracking-widest">
+                          <span className="font-mono text-accent-2 text-[clamp(0.55rem,1.6dvh,0.75rem)] tracking-widest">
                             N°{entry.n}
                           </span>
-                          <div className="flex flex-col">
-                            <span className="font-display uppercase text-highlight tracking-display">
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-display uppercase text-highlight text-[clamp(0.8rem,2.4dvh,1rem)] tracking-display break-words">
                               {entry.title}
                             </span>
-                            <span className="font-mono text-xs text-muted">
+                            <span className="font-mono text-[clamp(0.55rem,1.6dvh,0.75rem)] text-muted break-words">
                               {entry.sub}
                             </span>
                           </div>
@@ -169,15 +171,15 @@ export function MobileMenu({ socialLinks = [] }) {
 
                 {/* Socials & contact */}
                 <div>
-                  <h3 className="font-mono text-xs text-accent-2 tracking-widest uppercase mb-4">
+                  <h3 className="font-mono text-[clamp(0.55rem,1.6dvh,0.75rem)] text-accent-2 tracking-widest uppercase mb-[clamp(0.4rem,2dvh,1rem)]">
                     Socials & Contact
                   </h3>
-                  <ul className="space-y-2">
+                  <ul className="flex flex-wrap gap-x-[clamp(0.75rem,3vw,1.25rem)] gap-y-[clamp(0.2rem,1dvh,0.5rem)]">
                     {socialLinks.map(({ n, label, href }) => (
                       <li key={n}>
                         <a
                           href={href}
-                          className="font-mono text-xs tracking-widest uppercase text-accent hover:text-accent-hover transition-colors duration-200"
+                          className="font-mono text-[clamp(0.6rem,1.6dvh,0.75rem)] tracking-widest uppercase text-accent hover:text-accent-hover transition-colors duration-200"
                         >
                           <span className="text-accent-2">{n}.</span> {label} ↗
                         </a>
@@ -186,13 +188,13 @@ export function MobileMenu({ socialLinks = [] }) {
                   </ul>
 
                   {/* Footer info */}
-                  <div className="mt-8 pt-6 border-t border-border">
-                    <p className="font-mono text-xs text-muted tracking-widest uppercase mb-2">
+                  <div className="mt-[clamp(0.5rem,2.5dvh,2rem)] pt-[clamp(0.4rem,2dvh,1.5rem)] border-t border-border">
+                    <p className="font-mono text-[clamp(0.55rem,1.5dvh,0.75rem)] text-muted tracking-widest uppercase mb-2">
                       Copyright © Midwave Productions™
                       <br />
                       All Rights Reserved
                     </p>
-                    <div className="mt-3">
+                    <div className="mt-[clamp(0.25rem,1.2dvh,0.75rem)]">
                       <VersionLabel />
                     </div>
                   </div>
@@ -202,16 +204,16 @@ export function MobileMenu({ socialLinks = [] }) {
               {/* Right panel — pill cards showcase */}
               <motion.div
                 variants={reducedSlideInRight}
-                className="flex-1 flex flex-col justify-start border-r border-border px-6 py-8 overflow-y-auto scrollbar-none min-w-0"
+                className="flex-1 flex flex-col justify-center-safe items-center border-r border-border px-[clamp(0.75rem,4vw,1.5rem)] py-[clamp(0.75rem,4dvh,2rem)] overflow-y-auto overflow-x-hidden scrollbar-none min-w-0 min-h-0"
               >
-                <div className="flex flex-col gap-2 mb-8">
+                <div className="flex flex-col gap-[clamp(0.15rem,0.6dvh,0.5rem)] mb-[clamp(0.5rem,2dvh,1rem)] text-center w-full sticky top-0 z-10 bg-bg py-2">
                   <SectionNumber n="6" />
-                  <SectionHeading className="text-4xl md:text-5xl">
+                  <SectionHeading className="text-2xl min-[360px]:text-3xl min-[400px]:text-4xl">
                     EXPLORE
                   </SectionHeading>
                 </div>
 
-                <HorizontalDragCarousel showControls>
+                <HorizontalDragCarousel showControls controlsClassName="sticky bottom-0 z-10 bg-bg pt-1">
                   {SITEMAP_ENTRIES.map((entry) => (
                     <PillCard key={entry.n} entry={entry} />
                   ))}

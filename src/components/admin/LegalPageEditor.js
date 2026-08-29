@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { TextareaField } from "@/components/ui/TextareaField";
+import { RichTextField } from "@/components/ui/RichTextField";
 import { Badge } from "@/components/ui/Badge";
 
 export function LegalPageEditor({ pageKey, initialContent }) {
@@ -55,19 +55,14 @@ export function LegalPageEditor({ pageKey, initialContent }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <TextareaField
-          id={`legal-${pageKey}`}
-          label={`Page Content`}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          rows={20}
-          placeholder="Enter content here. Separate paragraphs with a blank line."
-        />
-        <p className="text-xs text-muted mt-2 font-mono tracking-widest uppercase">
-          Separate paragraphs with a blank line
-        </p>
-      </div>
+      <RichTextField
+        id={`legal-${pageKey}`}
+        label={`Page Content`}
+        name={pageKey}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Enter content here with formatting"
+      />
 
       <div className="flex items-center gap-3">
         <button

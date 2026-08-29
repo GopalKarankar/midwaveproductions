@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Footer } from "@/components/layout/Footer";
+import { sanitizeRichText } from "@/lib/utils/sanitizeRichText";
 import {
   placeholderArtists,
   getArtistBySlug,
@@ -68,9 +69,10 @@ export default async function ArtistProfilePage({ params }) {
           <span className="font-mono text-xs text-accent-2 tracking-widest uppercase">
             Bio
           </span>
-          <p className="font-body text-text max-w-2xl leading-relaxed">
-            {bio}
-          </p>
+          <div
+            className="font-body text-text max-w-2xl leading-relaxed prose prose-invert max-w-none [&_p]:my-0 [&_p]:leading-relaxed [&_strong]:text-highlight [&_em]:text-text [&_u]:underline [&_a]:text-accent [&_a]:underline hover:[&_a]:no-underline [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-4 [&_li]:my-1 [&_blockquote]:border-l-2 [&_blockquote]:border-accent [&_blockquote]:pl-4 [&_blockquote]:py-0 [&_blockquote]:italic [&_blockquote]:my-4 [&_h2]:text-2xl [&_h2]:font-display [&_h2]:font-bold [&_h2]:my-4 [&_h3]:text-xl [&_h3]:font-display [&_h3]:font-bold [&_h3]:my-3"
+            dangerouslySetInnerHTML={{ __html: sanitizeRichText(bio) }}
+          />
         </div>
 
         <div className="flex flex-col gap-3">

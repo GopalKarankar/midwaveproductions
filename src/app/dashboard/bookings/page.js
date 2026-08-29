@@ -25,8 +25,11 @@ export default async function AdminBookingsPage({ searchParams }) {
   });
 
   const status = params.status || "all";
-  const filter =
-    status === "all" || !status ? {} : { status };
+  const eventType = params.eventType || "all";
+  const filter = {
+    ...(status !== "all" && status && { status }),
+    ...(eventType !== "all" && eventType && { eventType }),
+  };
 
   const [bookings, totalCount, statusCountsRaw] = await Promise.all([
     Booking.find(filter)

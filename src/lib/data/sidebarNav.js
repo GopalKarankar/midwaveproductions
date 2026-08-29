@@ -23,5 +23,6 @@ export const adminSidebarConfig = {
     { n: 11, label: "Privacy Policy", href: "/dashboard/privacy" },
     { n: 12, label: "About Us", href: "/dashboard/about-us" },
     { n: 13, label: "Blog", href: "/dashboard/blog" },
+    { n: 14, label: "Pricing", href: "/dashboard/pricing" },
   ],
 };

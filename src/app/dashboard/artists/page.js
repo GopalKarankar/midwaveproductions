@@ -35,11 +35,13 @@ export default async function AdminArtistsPage({ searchParams }) {
 
     const searchTerm = params.q || "";
     const regex = searchTerm ? new RegExp(escapeRegex(searchTerm), "i") : null;
+    const status = params.status || 'all';
+
     const filter = {
       roles: ROLES.ARTIST,
-      ...(regex && {
-        $or: [{ email: regex }, { name: regex }],
-      }),
+      ...(regex && { $or: [{ email: regex }, { name: regex }] }),
+      ...(status === 'blocked' && { isBlocked: true }),
+      ...(status === 'active' && { isBlocked: false }),
     };
 
     const [artistUsers, totalCount] = await Promise.all([

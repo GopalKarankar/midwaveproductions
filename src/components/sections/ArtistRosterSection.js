@@ -1,11 +1,10 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { HorizontalDragCarousel } from "@/components/ui/HorizontalDragCarousel";
 import { ArtistCard } from "@/components/ui/ArtistCard";
-import { placeholderArtists, artistGenres } from "@/lib/data/placeholderArtists";
 import { staggerContainer } from "@/lib/motion/variants";
 import { useReducedMotionVariants } from "@/hooks/useReducedMotion";
 
@@ -14,15 +13,70 @@ import { useReducedMotionVariants } from "@/hooks/useReducedMotion";
 // its flush-left label, per CLAUDE.md's genre-sectioned showcase spec.
 export function ArtistRosterSection() {
   const [activeGenre, setActiveGenre] = useState("ALL");
+  const [artists, setArtists] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { fadeInUp } = useReducedMotionVariants();
 
+  useEffect(() => {
+    async function fetchArtists() {
+      try {
+        const res = await fetch("/api/artists");
+        if (!res.ok) throw new Error("Failed to fetch artists");
+        const data = await res.json();
+        setArtists(data.artists || []);
+      } catch (err) {
+        console.error("Error fetching artists:", err);
+        setError("Failed to load artists");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchArtists();
+  }, []);
+
+  // Extract unique genres from artists
+  const allGenres = useMemo(() => {
+    const genreSet = new Set();
+    artists.forEach((artist) => {
+      (artist.genres || []).forEach((g) => genreSet.add(g));
+    });
+    return Array.from(genreSet).sort();
+  }, [artists]);
+
   const artistsByGenre = useMemo(() => {
-    const genresToShow = activeGenre === "ALL" ? artistGenres : [activeGenre];
-    return genresToShow.map((genre) => ({
-      genre,
-      artists: placeholderArtists.filter((a) => a.genre === genre),
-    }));
-  }, [activeGenre]);
+    const genresToShow = activeGenre === "ALL" ? allGenres : [activeGenre];
+    return genresToShow
+      .map((genre) => ({
+        genre,
+        artists: artists.filter((a) => (a.genres || []).includes(genre)),
+      }))
+      .filter((g) => g.artists.length > 0);
+  }, [activeGenre, artists, allGenres]);
+
+  if (loading) {
+    return (
+      <section className="px-6 md:px-12 py-16 text-center">
+        <p className="text-muted">Loading artists...</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="px-6 md:px-12 py-16 text-center">
+        <p className="text-error">{error}</p>
+      </section>
+    );
+  }
+
+  if (artists.length === 0) {
+    return (
+      <section className="px-6 md:px-12 py-16 text-center">
+        <p className="text-muted">No artists yet. Check back soon!</p>
+      </section>
+    );
+  }
 
   return (
     <section className="px-6 md:px-12 py-16">
@@ -32,7 +86,7 @@ export function ArtistRosterSection() {
           active={activeGenre === "ALL"}
           onClick={() => setActiveGenre("ALL")}
         />
-        {artistGenres.map((genre) => (
+        {allGenres.map((genre) => (
           <GenreFilterTag
             key={genre}
             label={genre}
@@ -43,7 +97,7 @@ export function ArtistRosterSection() {
       </div>
 
       <div className="flex flex-col gap-16">
-        {artistsByGenre.map(({ genre, artists }) => (
+        {artistsByGenre.map(({ genre, artists: genreArtists }) => (
           <motion.div
             key={genre}
             variants={staggerContainer}
@@ -58,8 +112,8 @@ export function ArtistRosterSection() {
             </motion.div>
             <motion.div variants={fadeInUp}>
               <HorizontalDragCarousel>
-                {artists.map((artist) => (
-                  <ArtistCard key={artist.id} artist={artist} />
+                {genreArtists.map((artist) => (
+                  <ArtistCard key={artist._id || artist.slug} artist={artist} />
                 ))}
               </HorizontalDragCarousel>
             </motion.div>

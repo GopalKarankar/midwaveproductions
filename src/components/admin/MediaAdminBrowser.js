@@ -7,6 +7,7 @@ import { useTableQueryState } from "@/hooks/useTableQueryState";
 import { DataTable } from "@/components/ui/DataTable";
 import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { TableSearchInput } from "@/components/ui/TableSearchInput";
+import { FilterTabs } from "@/components/ui/FilterTabs";
 import { isGifAsset } from "@/lib/media/isGifAsset";
 
 const TYPE_LABELS = {
@@ -158,24 +159,19 @@ export function MediaAdminBrowser({ assets, page, pageSize, totalCount }) {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  const typeOptions = [
+    { value: 'all', label: 'All' },
+    ...TYPE_ORDER.map((t) => ({ value: t, label: TYPE_LABELS[t] })),
+  ];
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-4">
-        <div className="flex gap-2 flex-wrap">
-          {["all", ...TYPE_ORDER].map((t) => (
-            <button
-              key={t}
-              onClick={() => setParams({ type: t === "all" ? "all" : t })}
-              className={`px-3 py-2 text-xs font-mono uppercase tracking-widest transition-colors ${
-                activeType === t
-                  ? "text-accent-2 border-b-2 border-accent-2"
-                  : "text-muted hover:text-highlight border-b-2 border-transparent"
-              }`}
-            >
-              {t === "all" ? "All" : TYPE_LABELS[t]}
-            </button>
-          ))}
-        </div>
+        <FilterTabs
+          options={typeOptions}
+          active={activeType}
+          onChange={(value) => setParams({ type: value })}
+        />
 
         <TableSearchInput
           value={searchValue}

@@ -5,6 +5,7 @@ import { SectionNumber } from "@/components/ui/SectionNumber";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { FormField } from "@/components/ui/FormField";
 import { TextareaField } from "@/components/ui/TextareaField";
+import { RichTextField } from "@/components/ui/RichTextField";
 import { SelectField } from "@/components/ui/SelectField";
 import { Button } from "@/components/ui/Button";
 
@@ -89,12 +90,12 @@ export function DashboardArtistPanel({ artist, userId, sectionNumber = "1" }) {
           placeholder="Your artist name"
         />
 
-        <TextareaField
+        <RichTextField
           label="Bio"
           name="bio"
           value={formData.bio}
           onChange={handleChange}
-          placeholder="Full biography (up to 2000 chars)"
+          placeholder="Full biography with formatting (up to 2000 chars)"
           maxLength={2000}
         />
 

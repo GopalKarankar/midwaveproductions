@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { TextareaField } from "@/components/ui/TextareaField";
+import { RichTextField } from "@/components/ui/RichTextField";
 import { FormField } from "@/components/ui/FormField";
 import { Badge } from "@/components/ui/Badge";
 import { UploadProgressBar } from "@/components/ui/UploadProgressBar";
@@ -191,21 +191,15 @@ export function BlogPostEditor({ post, onSaved, onCancel }) {
         maxLength={280}
       />
 
-      <div>
-        <TextareaField
-          id="blog-body"
-          label="Body"
-          name="body"
-          value={formData.body}
-          onChange={handleChange}
-          rows={15}
-          placeholder="Enter post content. Separate paragraphs with a blank line."
-          maxLength={20000}
-        />
-        <p className="text-xs text-muted mt-2 font-mono tracking-widest uppercase">
-          Separate paragraphs with a blank line · {formData.body.length} / 20000
-        </p>
-      </div>
+      <RichTextField
+        id="blog-body"
+        label="Body"
+        name="body"
+        value={formData.body}
+        onChange={handleChange}
+        placeholder="Enter post content with formatting"
+        maxLength={20000}
+      />
 
       <FormField
         label="Tags (comma-separated)"

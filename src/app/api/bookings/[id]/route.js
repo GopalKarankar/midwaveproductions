@@ -37,7 +37,7 @@ export const PATCH = withApiLog("bookings-update", async function PATCH(request,
     await dbConnect();
     const updateData = {};
     if (status) updateData.status = status;
-    if (adminNotes !== undefined) updateData.adminNotes = adminNotes;
+    if (adminNotes !== undefined) updateData.adminNotes = adminNotes?.trim();
 
     const updated = await Booking.findByIdAndUpdate(id, updateData, {
       new: true,

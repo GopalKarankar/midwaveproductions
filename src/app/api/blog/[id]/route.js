@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb/connect";
 import BlogPost from "@/lib/mongodb/models/BlogPost";
 import MediaAsset from "@/lib/mongodb/models/MediaAsset";
+import { sanitizeRichText } from "@/lib/utils/sanitizeRichText";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createClient as createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
@@ -60,6 +61,7 @@ export const PATCH = withApiLog("blog-update", async function PATCH(request, { p
         update.tags = Array.isArray(body.tags)
           ? body.tags.map((t) => String(t).trim().toLowerCase()).filter(Boolean)
           : [];
+      else if (field === "body") update.body = sanitizeRichText(body.body);
       else update[field] = body[field];
     }
 

@@ -1,24 +1,62 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { SectionNumber } from "@/components/ui/SectionNumber";
 import { GenreShowcaseGroup } from "@/components/media/GenreShowcaseGroup";
 import { VideoThumbCard } from "@/components/media/VideoThumbCard";
-import { videoShowcase } from "@/lib/data/placeholderMedia";
 
 export function MediaGenreShowcaseSection() {
-  const groupedByGenre = useMemo(() => {
-    const groups = {};
-    videoShowcase.forEach((item) => {
-      if (!groups[item.genre]) {
-        groups[item.genre] = [];
+  const [media, setMedia] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchMedia() {
+      try {
+        const res = await fetch("/api/media?type=video");
+        if (!res.ok) throw new Error("Failed to fetch media");
+        const data = await res.json();
+        setMedia(data.media || []);
+      } catch (err) {
+        console.error("Error fetching media:", err);
+        setMedia([]);
+      } finally {
+        setLoading(false);
       }
-      groups[item.genre].push(item);
-    });
-    return groups;
+    }
+    fetchMedia();
   }, []);
 
+  const groupedByGenre = useMemo(() => {
+    const groups = {};
+    media.forEach((item) => {
+      // Get genre from artist
+      const genres = item.artistId?.genres || ["Uncategorized"];
+      const primaryGenre = genres[0] || "Uncategorized";
+      if (!groups[primaryGenre]) {
+        groups[primaryGenre] = [];
+      }
+      groups[primaryGenre].push(item);
+    });
+    return groups;
+  }, [media]);
+
   const genres = Object.keys(groupedByGenre);
+
+  if (loading) {
+    return (
+      <section className="px-6 md:px-12 py-24 text-center">
+        <p className="text-muted">Loading media...</p>
+      </section>
+    );
+  }
+
+  if (genres.length === 0) {
+    return (
+      <section className="px-6 md:px-12 py-24 text-center">
+        <p className="text-muted">No videos yet. Check back soon!</p>
+      </section>
+    );
+  }
 
   return (
     <section className="px-6 md:px-12 py-24">
@@ -28,9 +66,9 @@ export function MediaGenreShowcaseSection() {
 
       <div className="flex flex-col gap-16">
         {genres.map((genre) => (
-          <GenreShowcaseGroup key={genre} genre={genre}>
+          <GenreShowcaseGroup key={genre} genre={genre} isEmpty={groupedByGenre[genre].length === 0}>
             {groupedByGenre[genre].map((video) => (
-              <VideoThumbCard key={video.id} item={video} />
+              <VideoThumbCard key={video._id || video.id} item={video} />
             ))}
           </GenreShowcaseGroup>
         ))}

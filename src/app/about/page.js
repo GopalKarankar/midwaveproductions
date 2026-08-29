@@ -4,7 +4,8 @@ import { VersionLabel } from "@/components/ui/VersionLabel";
 import { AboutStorySection } from "@/components/sections/AboutStorySection";
 import { AboutPillarsSection } from "@/components/sections/AboutPillarsSection";
 import { Footer } from "@/components/layout/Footer";
-import { getLegalPages, paragraphsFromText } from "@/lib/settings/getLegalPages";
+import { getLegalPages } from "@/lib/settings/getLegalPages";
+import { sanitizeRichText } from "@/lib/utils/sanitizeRichText";
 import { aboutStory } from "@/lib/data/placeholderAbout";
 
 export const metadata = {
@@ -15,10 +16,7 @@ export const metadata = {
 
 export default async function AboutPage() {
   const legalPages = await getLegalPages();
-  const dbParagraphs = legalPages.about
-    ? paragraphsFromText(legalPages.about)
-    : null;
-  const paragraphs = dbParagraphs && dbParagraphs.length > 0 ? dbParagraphs : aboutStory;
+  const html = legalPages.about ? sanitizeRichText(legalPages.about) : null;
 
   return (
     <main className="flex flex-1 flex-col">
@@ -30,7 +28,7 @@ export default async function AboutPage() {
         <SectionHeading>About Midwave</SectionHeading>
       </section>
 
-      <AboutStorySection paragraphs={paragraphs} />
+      <AboutStorySection html={html} fallbackParagraphs={aboutStory} />
       <AboutPillarsSection />
       <Footer />
     </main>

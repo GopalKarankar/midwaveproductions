@@ -6,8 +6,12 @@ import { HorizontalDragCarousel } from "@/components/ui/HorizontalDragCarousel";
 import { staggerContainer, fadeInUp } from "@/lib/motion/variants";
 import { useReducedMotionVariants } from "@/hooks/useReducedMotion";
 
-export function GenreShowcaseGroup({ genre, children }) {
+export function GenreShowcaseGroup({ genre, children, isEmpty = false }) {
   const { fadeInUp: reducedFadeInUp } = useReducedMotionVariants();
+
+  if (isEmpty || !children || (Array.isArray(children) && children.length === 0)) {
+    return null;
+  }
 
   return (
     <motion.div

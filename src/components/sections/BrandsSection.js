@@ -1,13 +1,10 @@
 "use client";
 import { motion } from "framer-motion";
-import { placeholderBrands } from "@/lib/data/placeholderBrands";
 import { staggerContainer } from "@/lib/motion/variants";
 import { useReducedMotionVariants } from "@/hooks/useReducedMotion";
 
 // N°7 — Brands / Partners
-// No real partner logo assets exist yet — text chips stand in, with a
-// muted → full-text-color hover as the placeholder for "grayscale → color".
-export function BrandsSection() {
+export function BrandsSection({ brands = [] }) {
   const { fadeInUp } = useReducedMotionVariants();
 
   return (
@@ -22,14 +19,32 @@ export function BrandsSection() {
         whileInView="visible"
         viewport={{ once: true, margin: "-80px" }}
       >
-        {placeholderBrands.map((brand) => (
-          <motion.span
-            key={brand}
+        {brands.map((brand) => (
+          <motion.div
+            key={brand._id || brand.name}
             variants={fadeInUp}
-            className="font-body text-sm text-muted hover:text-text transition-colors duration-200"
+            className="group"
           >
-            {brand}
-          </motion.span>
+            {brand.logoUrl ? (
+              <a
+                href={brand.websiteUrl || "#"}
+                target={brand.websiteUrl ? "_blank" : undefined}
+                rel={brand.websiteUrl ? "noopener noreferrer" : undefined}
+                className="block h-12 opacity-60 group-hover:opacity-100 transition-opacity duration-300"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={brand.logoUrl}
+                  alt={brand.name}
+                  className="h-full object-contain"
+                />
+              </a>
+            ) : (
+              <span className="font-body text-sm text-muted group-hover:text-text transition-colors duration-200">
+                {brand.name}
+              </span>
+            )}
+          </motion.div>
         ))}
       </motion.div>
     </section>

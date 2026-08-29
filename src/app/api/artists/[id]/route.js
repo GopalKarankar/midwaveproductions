@@ -3,6 +3,7 @@ import dbConnect from "@/lib/mongodb/connect";
 import Artist from "@/lib/mongodb/models/Artist";
 import MediaAsset from "@/lib/mongodb/models/MediaAsset";
 import Booking from "@/lib/mongodb/models/Booking";
+import { sanitizeRichText } from "@/lib/utils/sanitizeRichText";
 import { getSession } from "@/lib/auth/getSession";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createClient as createAdminClient } from "@/lib/supabase/admin";
@@ -81,6 +82,10 @@ export const PATCH = withApiLog("artists-update", async function PATCH(request, 
 
     if (!profile?.roles?.includes("admin")) {
       for (const field of ADMIN_ONLY_FIELDS) delete body[field];
+    }
+
+    if (body.bio) {
+      body.bio = sanitizeRichText(body.bio);
     }
 
     const updated = await Artist.findByIdAndUpdate(id, body, {

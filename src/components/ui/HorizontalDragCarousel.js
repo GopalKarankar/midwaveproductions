@@ -3,7 +3,7 @@ import { useRef, useState, useEffect } from "react";
 import { useReducedMotion } from "framer-motion";
 import { animate } from "framer-motion";
 
-export function HorizontalDragCarousel({ children, showControls = false }) {
+export function HorizontalDragCarousel({ children, showControls = false, controlsClassName = "" }) {
   const ref = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [scrollPos, setScrollPos] = useState(0);
@@ -71,10 +71,10 @@ export function HorizontalDragCarousel({ children, showControls = false }) {
   }
 
   return (
-    <div>
+    <div className="w-full min-w-0">
       <div
         ref={ref}
-        className={`flex gap-4 overflow-x-auto scrollbar-none pb-4 ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+        className={`flex gap-4 overflow-x-auto scrollbar-none pb-4 touch-pan-y ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -83,12 +83,12 @@ export function HorizontalDragCarousel({ children, showControls = false }) {
         {children}
       </div>
       {showControls && (
-        <div className="flex gap-3 items-center justify-center mt-4">
+        <div className={`flex gap-2 items-center justify-center mt-3 ${controlsClassName}`}>
           <button
             onClick={() => slideCarousel("left")}
             disabled={!canScrollLeft}
             aria-label="Previous"
-            className="flex items-center justify-center size-10 border border-border hover:border-accent transition-colors duration-200 disabled:opacity-30 disabled:pointer-events-none"
+            className="flex items-center justify-center size-9 border border-border hover:border-accent transition-colors duration-200 disabled:opacity-30 disabled:pointer-events-none"
           >
             <span className="text-highlight">←</span>
           </button>
@@ -96,7 +96,7 @@ export function HorizontalDragCarousel({ children, showControls = false }) {
             onClick={() => slideCarousel("right")}
             disabled={!canScrollRight}
             aria-label="Next"
-            className="flex items-center justify-center size-10 border border-border hover:border-accent transition-colors duration-200 disabled:opacity-30 disabled:pointer-events-none"
+            className="flex items-center justify-center size-9 border border-border hover:border-accent transition-colors duration-200 disabled:opacity-30 disabled:pointer-events-none"
           >
             <span className="text-highlight">→</span>
           </button>

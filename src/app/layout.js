@@ -26,6 +26,9 @@ export const metadata = {
   title: "Midwave Productions — Artist Management & Promotion",
   description:
     "Artist run — management, promotion, bookings and media production.",
+  icons: {
+    icon: "/images/Midwave productions logo (without caption).png",
+  },
 };
 
 export default function RootLayout({ children }) {

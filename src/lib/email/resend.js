@@ -36,3 +36,20 @@ export async function sendBookingConfirmationEmail({
     text: `Hi ${requesterName},\n\nWe've received your ${eventType} booking inquiry for ${artistStageName}. We'll be in touch within 2 business days.\n\n— Midwave Productions`,
   });
 }
+
+export async function sendStudioReservationConfirmationEmail({
+  requesterName,
+  requesterEmail,
+  preferredDate,
+  purpose,
+}) {
+  const resend = getClient();
+  const dateStr = new Date(preferredDate).toLocaleDateString();
+  return resend.emails.send({
+    from: FROM_ADDRESS,
+    to: requesterEmail,
+    replyTo: process.env.CONTACT_EMAIL_TO,
+    subject: "Studio reservation confirmed",
+    text: `Hi ${requesterName},\n\nWe've received your studio reservation request for ${dateStr} (${purpose}). We'll confirm availability within 24 hours.\n\n— Midwave Productions`,
+  });
+}

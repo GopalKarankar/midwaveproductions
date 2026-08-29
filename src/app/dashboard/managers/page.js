@@ -30,11 +30,13 @@ export default async function ManagersPage({ searchParams }) {
 
   const searchTerm = params.q || "";
   const regex = searchTerm ? new RegExp(escapeRegex(searchTerm), "i") : null;
+  const status = params.status || 'all';
+
   const filter = {
     roles: "manager",
-    ...(regex && {
-      $or: [{ email: regex }, { name: regex }],
-    }),
+    ...(regex && { $or: [{ email: regex }, { name: regex }] }),
+    ...(status === 'blocked' && { isBlocked: true }),
+    ...(status === 'active' && { isBlocked: false }),
   };
 
   const [users, totalCount] = await Promise.all([
@@ -73,6 +75,7 @@ export default async function ManagersPage({ searchParams }) {
         page={page}
         pageSize={pageSize}
         totalCount={totalCount}
+        showRoleFilter={false}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useReactTable, getCoreRowModel, createColumnHelper } from "@tanstack/react-table";
 import { useTableQueryState } from "@/hooks/useTableQueryState";
 import { DataTable } from "@/components/ui/DataTable";
@@ -8,6 +9,8 @@ import { DataTablePagination } from "@/components/ui/DataTablePagination";
 import { TableSearchInput } from "@/components/ui/TableSearchInput";
 import { Badge } from "@/components/ui/Badge";
 import { BlogPostEditor } from "@/components/admin/BlogPostEditor";
+import { FilterTabs } from "@/components/ui/FilterTabs";
+import { SelectField } from "@/components/ui/SelectField";
 
 const columnHelper = createColumnHelper();
 
@@ -119,14 +122,17 @@ function createBlogColumns({
   ];
 }
 
-export function BlogAdminTable({ posts, page, pageSize, totalCount }) {
+export function BlogAdminTable({ posts, page, pageSize, totalCount, distinctTags = [] }) {
   const [localPosts, setLocalPosts] = useState(posts);
   const [editingPost, setEditingPost] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const { q, setParams, isPending } = useTableQueryState();
+  const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(q);
+  const status = searchParams.get('status') || 'all';
+  const tag = searchParams.get('tag') || 'all';
 
   useEffect(() => {
     setLocalPosts(posts);
@@ -236,6 +242,17 @@ export function BlogAdminTable({ posts, page, pageSize, totalCount }) {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  const statusOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'published', label: 'Published' },
+    { value: 'draft', label: 'Draft' },
+  ];
+
+  const tagOptions = [
+    { value: 'all', label: 'All' },
+    ...distinctTags.map((t) => ({ value: t, label: t })),
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       {editingPost && (
@@ -254,12 +271,30 @@ export function BlogAdminTable({ posts, page, pageSize, totalCount }) {
           + New Post
         </button>
 
-        <TableSearchInput
-          value={searchValue}
-          onChange={setSearchValue}
-          onSearch={(v) => setParams({ q: v })}
-          placeholder="Search by title or excerpt..."
-        />
+        <div className="flex flex-col gap-3">
+          <TableSearchInput
+            value={searchValue}
+            onChange={setSearchValue}
+            onSearch={(v) => setParams({ q: v })}
+            placeholder="Search by title or excerpt..."
+          />
+
+          <FilterTabs
+            options={statusOptions}
+            active={status}
+            onChange={(value) => setParams({ status: value })}
+          />
+
+          {distinctTags.length > 0 && (
+            <SelectField
+              id="tag-filter"
+              label="Filter by Tag"
+              options={tagOptions}
+              value={tag}
+              onChange={(e) => setParams({ tag: e.target.value })}
+            />
+          )}
+        </div>
 
         {errorMessage && (
           <p className="font-mono text-xs text-error tracking-widest uppercase">
