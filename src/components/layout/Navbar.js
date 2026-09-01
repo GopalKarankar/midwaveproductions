@@ -8,7 +8,7 @@ export async function Navbar() {
   const socialLinks = await getSocialLinks();
   return (
     <header className="flex items-center justify-between border-b border-border bg-bg px-6 md:px-12 py-4">
-      <Link href="/" className="flex items-center gap-3">
+      <Link href="/" className="flex items-center gap-1">
         <Image
           src="/images/Midwave productions logo (without caption).png"
           alt=""

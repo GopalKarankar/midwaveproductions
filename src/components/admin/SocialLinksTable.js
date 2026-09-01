@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useReactTable, getCoreRowModel, createColumnHelper } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/DataTable";
 import { Badge } from "@/components/ui/Badge";
+import { SocialIcon } from "@/components/ui/SocialIcon";
 import { SOCIAL_PLATFORMS } from "@/constants/socialPlatforms";
 
 const columnHelper = createColumnHelper();
@@ -16,7 +17,8 @@ function createSocialColumns() {
       cell: (info) => {
         const platform = info.row.original;
         return (
-          <span className="font-mono text-xs text-accent-2 uppercase tracking-widest">
+          <span className="flex items-center gap-2 font-mono text-xs text-accent-2 uppercase tracking-widest">
+            <SocialIcon platform={platform.key} className="w-4 h-4 shrink-0" />
             {platform.label}
           </span>
         );

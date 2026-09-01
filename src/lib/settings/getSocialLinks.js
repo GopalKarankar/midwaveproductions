@@ -14,7 +14,7 @@ export const getSocialLinks = cache(async function getSocialLinks() {
     const href = stored[key];
     if (!href) continue;
     n += 1;
-    links.push({ n, label, href });
+    links.push({ n, key, label, href });
   }
   return links;
 });

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { VersionLabel } from "@/components/ui/VersionLabel";
+import { SocialIcon } from "@/components/ui/SocialIcon";
 import { getSocialLinks } from "@/lib/settings/getSocialLinks";
 
 export async function Footer() {
@@ -20,12 +21,13 @@ export async function Footer() {
         </div>
 
         <ul className="flex flex-col gap-3">
-          {socialLinks.map(({ n, label, href }) => (
+          {socialLinks.map(({ n, key, label, href }) => (
             <li key={n}>
               <a
                 href={href}
-                className="font-mono text-xs tracking-widest uppercase text-text hover:text-accent-hover transition-colors duration-200"
+                className="flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-text hover:text-accent-hover transition-colors duration-200"
               >
+                <SocialIcon platform={key} className="w-3.5 h-3.5 shrink-0" />
                 <span className="text-accent-2">{n}.</span> {label} ↗
               </a>
             </li>
