@@ -6,7 +6,11 @@ export function VideoThumbCard({ item }) {
   const [isHovered, setIsHovered] = useState(false);
 
   // Support both placeholder format and MediaAsset format
-  const imageUrl = item.image || item.url;
+  let imageUrl = item.image || item.url;
+  if (item.source === "youtube" && item.youtubeVideoId) {
+    imageUrl = `https://img.youtube.com/vi/${item.youtubeVideoId}/hqdefault.jpg`;
+  }
+
   const title = item.title || item.label || item.filename || "Untitled";
   const url = item.url;
 

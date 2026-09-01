@@ -7,12 +7,15 @@ import { SelectField } from "@/components/ui/SelectField";
 import { UploadProgressBar } from "@/components/ui/UploadProgressBar";
 import { MIME_RULES, ACCEPT_ATTR } from "@/lib/media/mimeRules";
 import { uploadWithProgress } from "@/lib/media/uploadWithProgress";
+import { extractYoutubeVideoId } from "@/lib/media/parseYoutubeUrl";
 
 export function MediaUploadForm({ artists = [] }) {
   const router = useRouter();
   const fileInputRef = useRef(null);
 
+  const [sourceMode, setSourceMode] = useState("upload");
   const [file, setFile] = useState(null);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [artistId, setArtistId] = useState("");
   const [label, setLabel] = useState("");
   const [status, setStatus] = useState("idle");
@@ -23,6 +26,19 @@ export function MediaUploadForm({ artists = [] }) {
     value: artist._id.toString(),
     label: artist.stageName,
   }));
+
+  const handleSourceModeChange = (mode) => {
+    setSourceMode(mode);
+    setErrorMessage("");
+    if (mode === "upload") {
+      setYoutubeUrl("");
+    } else {
+      setFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0];
@@ -45,9 +61,21 @@ export function MediaUploadForm({ artists = [] }) {
     setFile(selectedFile);
   };
 
+  const handleYoutubeUrlChange = (e) => {
+    const url = e.target.value;
+    setYoutubeUrl(url);
+    setErrorMessage("");
+
+    if (url && !extractYoutubeVideoId(url)) {
+      setErrorMessage("Invalid YouTube URL");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) return;
+
+    if (sourceMode === "upload" && !file) return;
+    if (sourceMode === "youtube" && (!youtubeUrl || !extractYoutubeVideoId(youtubeUrl))) return;
 
     setStatus("uploading");
     setProgress(0);
@@ -55,7 +83,8 @@ export function MediaUploadForm({ artists = [] }) {
 
     try {
       await uploadWithProgress({
-        file,
+        ...(sourceMode === "upload" && { file }),
+        ...(sourceMode === "youtube" && { youtubeUrl }),
         artistId: artistId || null,
         label: label || null,
         onProgress: setProgress,
@@ -66,6 +95,7 @@ export function MediaUploadForm({ artists = [] }) {
 
       setTimeout(() => {
         setFile(null);
+        setYoutubeUrl("");
         setLabel("");
         setProgress(0);
         setStatus("idle");
@@ -102,27 +132,74 @@ export function MediaUploadForm({ artists = [] }) {
       <h2 className="text-lg font-mono text-accent-2 uppercase tracking-widest mb-6">Upload Media</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* File picker */}
+        {/* Source mode toggle */}
         <div>
-          <label className="block font-mono text-xs text-accent-2 uppercase tracking-widest mb-2">File</label>
-          <label
-            htmlFor="media-file"
-            className="block cursor-pointer border border-border hover:border-accent transition-colors px-4 py-6 text-center font-mono text-xs text-muted uppercase tracking-widest"
-          >
-            {file ? file.name : "Click to select a file"}
-          </label>
-          <input
-            id="media-file"
-            ref={fileInputRef}
-            type="file"
-            accept={ACCEPT_ATTR}
-            onChange={handleFileChange}
-            className="sr-only"
-          />
-          {errorMessage && status === "idle" && (
-            <p className="mt-2 font-mono text-xs text-error">{errorMessage}</p>
-          )}
+          <label className="block font-mono text-xs text-accent-2 uppercase tracking-widest mb-3">Mode</label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => handleSourceModeChange("upload")}
+              className={`flex-1 px-4 py-2 font-mono text-xs uppercase tracking-widest border transition-colors ${
+                sourceMode === "upload"
+                  ? "border-accent bg-accent text-black"
+                  : "border-border hover:border-accent text-muted"
+              }`}
+            >
+              Upload File
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSourceModeChange("youtube")}
+              className={`flex-1 px-4 py-2 font-mono text-xs uppercase tracking-widest border transition-colors ${
+                sourceMode === "youtube"
+                  ? "border-accent bg-accent text-black"
+                  : "border-border hover:border-accent text-muted"
+              }`}
+            >
+              YouTube Link
+            </button>
+          </div>
         </div>
+
+        {/* File picker */}
+        {sourceMode === "upload" && (
+          <div>
+            <label className="block font-mono text-xs text-accent-2 uppercase tracking-widest mb-2">File</label>
+            <label
+              htmlFor="media-file"
+              className="block cursor-pointer border border-border hover:border-accent transition-colors px-4 py-6 text-center font-mono text-xs text-muted uppercase tracking-widest"
+            >
+              {file ? file.name : "Click to select a file"}
+            </label>
+            <input
+              id="media-file"
+              ref={fileInputRef}
+              type="file"
+              accept={ACCEPT_ATTR}
+              onChange={handleFileChange}
+              className="sr-only"
+            />
+            {errorMessage && status === "idle" && (
+              <p className="mt-2 font-mono text-xs text-error">{errorMessage}</p>
+            )}
+          </div>
+        )}
+
+        {/* YouTube URL field */}
+        {sourceMode === "youtube" && (
+          <div>
+            <FormField
+              label="YouTube URL"
+              type="text"
+              value={youtubeUrl}
+              onChange={handleYoutubeUrlChange}
+              placeholder="https://youtube.com/watch?v=..."
+            />
+            {errorMessage && status === "idle" && (
+              <p className="mt-2 font-mono text-xs text-error">{errorMessage}</p>
+            )}
+          </div>
+        )}
 
         {/* Artist dropdown */}
         <SelectField
@@ -153,7 +230,10 @@ export function MediaUploadForm({ artists = [] }) {
         {/* Submit button */}
         <button
           type="submit"
-          disabled={!file || status === "uploading"}
+          disabled={
+            (sourceMode === "upload" ? !file : !youtubeUrl || !extractYoutubeVideoId(youtubeUrl)) ||
+            status === "uploading"
+          }
           className="w-full px-4 py-3 font-mono text-xs uppercase tracking-widest border border-border bg-accent text-black hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {status === "uploading" ? "Uploading..." : status === "success" ? "Success!" : "Upload"}

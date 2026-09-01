@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Footer } from "@/components/layout/Footer";
+import { ExportPortfolioPdfButton } from "@/components/artists/ExportPortfolioPdfButton";
 import { sanitizeRichText } from "@/lib/utils/sanitizeRichText";
 import {
   placeholderArtists,
@@ -88,6 +89,17 @@ export default async function ArtistProfilePage({ params }) {
               </li>
             ))}
           </ul>
+          <div className="pt-4 border-t border-border">
+            <ExportPortfolioPdfButton
+              stageName={stageName}
+              genre={genre}
+              bio={bio}
+              socialLinks={socialLinks}
+              featuredTracks={featuredTracks}
+              upcomingEvents={upcomingEvents}
+              slug={artist.slug}
+            />
+          </div>
         </div>
       </section>
 

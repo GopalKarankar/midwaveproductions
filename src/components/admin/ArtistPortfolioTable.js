@@ -14,6 +14,7 @@ import { TableSearchInput } from "@/components/ui/TableSearchInput";
 import { FilterTabs } from "@/components/ui/FilterTabs";
 import { ArtistPortfolioEditor } from "@/components/admin/ArtistPortfolioEditor";
 import { useTableQueryState } from "@/hooks/useTableQueryState";
+import { exportArtistPortfolioPdf } from "@/lib/pdf/exportArtistPortfolioPdf";
 
 const columnHelper = createColumnHelper();
 
@@ -28,17 +29,13 @@ export function ArtistPortfolioTable({
   const [artists, setArtists] = useState(initialArtists);
   const [editingArtist, setEditingArtist] = useState(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [exportingId, setExportingId] = useState(null);
 
   useEffect(() => {
     setArtists(initialArtists);
   }, [initialArtists]);
 
-  const { params, setParams, isPending } = useTableQueryState({
-    page,
-    pageSize,
-    q: "",
-    status: "all",
-  });
+  const { q, status, setParams, isPending } = useTableQueryState();
 
   const statusTabs = [
     { id: "all", label: "All" },
@@ -123,8 +120,26 @@ export function ArtistPortfolioTable({
       header: "Actions",
       cell: (info) => {
         const artist = info.row.original;
+        const isExporting = exportingId === artist._id;
+
+        const handleExport = async () => {
+          setExportingId(artist._id);
+          try {
+            await exportArtistPortfolioPdf(artist);
+          } finally {
+            setExportingId(null);
+          }
+        };
+
         return (
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="text-xs font-mono text-accent hover:text-accent-hover disabled:text-muted disabled:cursor-not-allowed transition-colors"
+            >
+              {isExporting ? "Exporting..." : "Export"}
+            </button>
             <button
               onClick={() => {
                 setEditingArtist(artist);
@@ -213,7 +228,7 @@ export function ArtistPortfolioTable({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <TableSearchInput
-          value={params.q}
+          value={q}
           onChange={(q) => setParams({ q, page: 1 })}
           placeholder="Search by stage name or slug..."
           disabled={isPending}
@@ -231,7 +246,7 @@ export function ArtistPortfolioTable({
 
       <FilterTabs
         tabs={statusTabs}
-        value={params.status}
+        value={status}
         onChange={(status) => setParams({ status, page: 1 })}
         disabled={isPending}
       />

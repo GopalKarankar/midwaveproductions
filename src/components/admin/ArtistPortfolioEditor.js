@@ -8,6 +8,7 @@ import { SelectField } from "@/components/ui/SelectField";
 import { Badge } from "@/components/ui/Badge";
 import { ArtistImageUploadField } from "@/components/admin/ArtistImageUploadField";
 import { formatFileSize } from "@/lib/media/formatFileSize";
+import { exportArtistPortfolioPdf } from "@/lib/pdf/exportArtistPortfolioPdf";
 
 const slugify = (text) => {
   if (!text) return "";
@@ -39,6 +40,7 @@ export function ArtistPortfolioEditor({ artist, isAdmin, onSaved, onCancel }) {
   }));
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [managers, setManagers] = useState([]);
 
@@ -625,6 +627,24 @@ export function ArtistPortfolioEditor({ artist, isAdmin, onSaved, onCancel }) {
             >
               {isSaving ? "Saving..." : "Save"}
             </button>
+
+            {artist?._id && (
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsExporting(true);
+                  try {
+                    await exportArtistPortfolioPdf(formData);
+                  } finally {
+                    setIsExporting(false);
+                  }
+                }}
+                disabled={isExporting}
+                className="px-4 py-2 font-mono text-xs tracking-widest uppercase border border-accent text-accent hover:bg-accent hover:text-bg disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                {isExporting ? "Exporting..." : "Export as PDF"}
+              </button>
+            )}
 
             {isDirty && <Badge variant="muted">Unsaved changes</Badge>}
 

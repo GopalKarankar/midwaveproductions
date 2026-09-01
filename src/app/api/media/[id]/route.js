@@ -34,14 +34,16 @@ export const DELETE = withApiLog("media-delete", async function DELETE(request, 
       return NextResponse.json({ error: "Media asset not found" }, { status: 404 });
     }
 
-    const supabaseAdmin = createAdminClient();
-    const { error: deleteError } = await supabaseAdmin.storage
-      .from(STORAGE_BUCKET)
-      .remove([asset.storagePath]);
+    if (asset.source !== "youtube") {
+      const supabaseAdmin = createAdminClient();
+      const { error: deleteError } = await supabaseAdmin.storage
+        .from(STORAGE_BUCKET)
+        .remove([asset.storagePath]);
 
-    if (deleteError) {
-      console.error("[ROUTE DELETE /api/media/[id]] storage delete failed", deleteError);
-      return NextResponse.json({ error: "Failed to delete media from storage" }, { status: 500 });
+      if (deleteError) {
+        console.error("[ROUTE DELETE /api/media/[id]] storage delete failed", deleteError);
+        return NextResponse.json({ error: "Failed to delete media from storage" }, { status: 500 });
+      }
     }
 
     await MediaAsset.findByIdAndDelete(id);

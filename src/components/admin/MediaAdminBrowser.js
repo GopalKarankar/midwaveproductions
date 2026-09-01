@@ -26,7 +26,11 @@ function createMediaColumns() {
     columnHelper.accessor("filename", {
       id: "filename",
       header: "Filename",
-      cell: (info) => <span className="font-body text-highlight truncate">{info.getValue()}</span>,
+      cell: (info) => {
+        const asset = info.row.original;
+        const displayName = asset.filename || (asset.source === "youtube" ? asset.label || "YouTube Video" : "—");
+        return <span className="font-body text-highlight truncate">{displayName}</span>;
+      },
     }),
     columnHelper.accessor("artistId.stageName", {
       id: "artist",
@@ -55,23 +59,33 @@ function createMediaColumns() {
       header: "Preview",
       cell: (info) => {
         const asset = info.row.original;
-        if (asset.type !== "image") return null;
-
-        return isGifAsset(asset.mimeType) ? (
-          <img
-            src={asset.url}
-            alt={asset.filename}
-            className="w-16 h-16 object-cover border border-border"
-          />
-        ) : (
-          <Image
-            src={asset.url}
-            alt={asset.filename}
-            width={64}
-            height={64}
-            className="w-16 h-16 object-cover border border-border"
-          />
-        );
+        if (asset.type === "image") {
+          return isGifAsset(asset.mimeType) ? (
+            <img
+              src={asset.url}
+              alt={asset.filename}
+              className="w-16 h-16 object-cover border border-border"
+            />
+          ) : (
+            <Image
+              src={asset.url}
+              alt={asset.filename}
+              width={64}
+              height={64}
+              className="w-16 h-16 object-cover border border-border"
+            />
+          );
+        }
+        if (asset.type === "video" && asset.source === "youtube" && asset.youtubeVideoId) {
+          return (
+            <img
+              src={`https://img.youtube.com/vi/${asset.youtubeVideoId}/hqdefault.jpg`}
+              alt={asset.label || asset.filename}
+              className="w-16 h-16 object-cover border border-border"
+            />
+          );
+        }
+        return null;
       },
     }),
     columnHelper.display({

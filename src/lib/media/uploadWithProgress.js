@@ -1,7 +1,11 @@
-export function uploadWithProgress({ file, artistId, label, onProgress }) {
+export function uploadWithProgress({ file, youtubeUrl, artistId, label, onProgress }) {
   return new Promise((resolve, reject) => {
     const formData = new FormData();
-    formData.append("file", file);
+    if (file) {
+      formData.append("file", file);
+    } else if (youtubeUrl) {
+      formData.append("youtubeUrl", youtubeUrl);
+    }
     if (artistId) formData.append("artistId", artistId);
     if (label) formData.append("label", label);
 
