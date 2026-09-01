@@ -2,8 +2,18 @@ export const dashboardSidebarConfig = {
   heading: "Dashboard",
   items: [
     { n: 1, label: "Dashboard", href: "/dashboard" },
-    { n: 2, label: "Profile", href: "/dashboard" },
-    { n: 3, label: "Settings", href: "/dashboard" },
+    { n: 2, label: "Profile", href: "/dashboard/profile" },
+    { n: 3, label: "Settings", href: "/dashboard/settings" },
+  ],
+};
+
+export const managerSidebarConfig = {
+  heading: "Dashboard",
+  items: [
+    { n: 1, label: "Dashboard", href: "/dashboard" },
+    { n: 2, label: "Artist Portfolio", href: "/dashboard/artist-portfolio" },
+    { n: 3, label: "Profile", href: "/dashboard/profile" },
+    { n: 4, label: "Settings", href: "/dashboard/settings" },
   ],
 };
 
@@ -24,5 +34,9 @@ export const adminSidebarConfig = {
     { n: 12, label: "About Us", href: "/dashboard/about-us" },
     { n: 13, label: "Blog", href: "/dashboard/blog" },
     { n: 14, label: "Pricing", href: "/dashboard/pricing" },
+    { n: 15, label: "Reserve Studio", href: "/dashboard/reserve-studio" },
+    { n: 16, label: "Artist Portfolio", href: "/dashboard/artist-portfolio" },
+    { n: 17, label: "Profile", href: "/dashboard/profile" },
+    { n: 18, label: "Settings", href: "/dashboard/settings" },
   ],
 };

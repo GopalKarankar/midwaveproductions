@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb/connect";
+import Artist from "@/lib/mongodb/models/Artist";
 import MediaAsset from "@/lib/mongodb/models/MediaAsset";
 import { requireRole } from "@/lib/auth/requireRole";
 import { createClient as createAdminClient } from "@/lib/supabase/admin";
@@ -9,7 +10,7 @@ import { withApiLog } from "@/lib/monitoring/withApiLog";
 
 const STORAGE_BUCKET = "media";
 
-// POST /api/media/upload — admin only
+// POST /api/media/upload — manager or admin
 export const POST = withApiLog("media-upload", async function POST(request, { logMeta }) {
   const { allowed, retryAfter } = checkRateLimit(request, {
     routeKey: 'media-upload',
@@ -21,12 +22,13 @@ export const POST = withApiLog("media-upload", async function POST(request, { lo
     return rateLimitResponse(retryAfter);
   }
 
-  const { error, session, profile } = await requireRole("admin");
+  const { error, session, profile } = await requireRole("manager");
   if (error) return error;
   logMeta.userId = session.user.id;
   logMeta.userRoles = profile.roles ?? [];
 
   try {
+    await dbConnect();
     const formData = await request.formData();
     const file = formData.get("file");
     const artistId = formData.get("artistId");
@@ -34,6 +36,14 @@ export const POST = withApiLog("media-upload", async function POST(request, { lo
 
     if (!file || typeof file === "string") {
       return NextResponse.json({ error: "file is required" }, { status: 400 });
+    }
+
+    // Non-admin managers can only upload media for artists they manage
+    if (!profile?.roles?.includes("admin") && artistId) {
+      const owned = await Artist.exists({ _id: artistId, managedBy: session.user.id });
+      if (!owned) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     const rule = MIME_RULES[file.type];
@@ -63,8 +73,6 @@ export const POST = withApiLog("media-upload", async function POST(request, { lo
     const {
       data: { publicUrl },
     } = supabaseAdmin.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
-
-    await dbConnect();
     const asset = await MediaAsset.create({
       artistId: artistId || undefined,
       uploadedBy: session.user.id,

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import dbConnect from "@/lib/mongodb/connect";
 import Artist from "@/lib/mongodb/models/Artist";
 import { requireRole } from "@/lib/auth/requireRole";
+import { sanitizeRichText } from "@/lib/utils/sanitizeRichText";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rateLimit";
 import { withApiLog } from "@/lib/monitoring/withApiLog";
 
@@ -65,11 +67,14 @@ export const POST = withApiLog("artists-create", async function POST(request, { 
       return NextResponse.json({ error: "stageName and slug are required" }, { status: 400 });
     }
 
+    const isAdminCaller = profile?.roles?.includes("admin");
+    const managedBy = isAdminCaller ? (body.managedBy || undefined) : session.user.id;
+
     const artist = await Artist.create({
       stageName: body.stageName.trim(),
       slug: body.slug.trim().toLowerCase(),
       realName: body.realName?.trim(),
-      bio: body.bio?.trim(),
+      bio: sanitizeRichText(body.bio?.trim()),
       shortBio: body.shortBio?.trim(),
       genres: Array.isArray(body.genres) ? body.genres.map((g) => String(g).trim()) : [],
       socialLinks: body.socialLinks,
@@ -78,7 +83,8 @@ export const POST = withApiLog("artists-create", async function POST(request, { 
       featuredTracks: body.featuredTracks,
       upcomingEvents: body.upcomingEvents,
       // Privileged fields are never taken from the request body on create
-      ownerId: body.ownerId || session.user.id,
+      ownerId: body.ownerId || new mongoose.Types.ObjectId().toString(),
+      managedBy,
       isPublished: false,
       isFeatured: false,
     });

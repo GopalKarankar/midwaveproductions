@@ -72,15 +72,17 @@ export const PATCH = withApiLog("artists-update", async function PATCH(request, 
     if (!artist) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const isOwner = artist.ownerId === session.user.id;
-    const isPrivileged = profile?.roles?.some((r) => ["manager", "admin"].includes(r));
+    const isAdmin = profile?.roles?.includes("admin");
+    const isAssignedManager =
+      profile?.roles?.includes("manager") && artist.managedBy?.toString() === session.user.id;
 
-    if (!isOwner && !isPrivileged) {
+    if (!isOwner && !isAdmin && !isAssignedManager) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
 
-    if (!profile?.roles?.includes("admin")) {
+    if (!isAdmin) {
       for (const field of ADMIN_ONLY_FIELDS) delete body[field];
     }
 
@@ -91,7 +93,7 @@ export const PATCH = withApiLog("artists-update", async function PATCH(request, 
     const updated = await Artist.findByIdAndUpdate(id, body, {
       new: true,
       runValidators: true,
-    }).select(PUBLIC_EXCLUDE + " isPublished isFeatured");
+    }).select(PUBLIC_EXCLUDE);
 
     return NextResponse.json({ artist: updated });
   } catch (err) {

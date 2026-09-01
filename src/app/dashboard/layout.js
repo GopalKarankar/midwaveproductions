@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/getSession";
+import { hasRole } from "@/constants/roles";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { SidebarMobileDrawer } from "@/components/layout/SidebarMobileDrawer";
 import { SignOutButton } from "@/components/layout/SignOutButton";
-import { dashboardSidebarConfig, adminSidebarConfig } from "@/lib/data/sidebarNav";
+import { dashboardSidebarConfig, managerSidebarConfig, adminSidebarConfig } from "@/lib/data/sidebarNav";
 
 export const metadata = {
   title: "Dashboard - Midwave Productions",
@@ -17,8 +18,9 @@ export default async function DashboardLayout({ children }) {
     redirect(blocked ? "/?blocked=1" : "/");
   }
 
-  const isAdmin = profile?.roles?.includes("admin");
-  const sidebarConfig = isAdmin ? adminSidebarConfig : dashboardSidebarConfig;
+  const isAdmin = hasRole(profile?.roles, "admin");
+  const isManager = hasRole(profile?.roles, "manager");
+  const sidebarConfig = isAdmin ? adminSidebarConfig : isManager ? managerSidebarConfig : dashboardSidebarConfig;
 
   return (
     <div className="min-h-svh bg-bg flex flex-col md:flex-row">
@@ -34,7 +36,7 @@ export default async function DashboardLayout({ children }) {
         </span>
       </div>
 
-      {isAdmin ? <AdminSidebar /> : <DashboardSidebar userRole={profile?.roles} />}
+      {isAdmin ? <AdminSidebar /> : <DashboardSidebar sidebarConfig={sidebarConfig} />}
       <main className="flex-1 md:border-l border-border overflow-auto">
         {children}
       </main>
