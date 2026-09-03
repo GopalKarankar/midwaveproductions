@@ -5,7 +5,6 @@ import {
   useReactTable,
   createColumnHelper,
   getCoreRowModel,
-  flexRender,
 } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/Badge";
 import { DataTable } from "@/components/ui/DataTable";
@@ -36,11 +35,12 @@ export function ArtistPortfolioTable({
   }, [initialArtists]);
 
   const { q, status, setParams, isPending } = useTableQueryState();
+  const [searchValue, setSearchValue] = useState(q);
 
-  const statusTabs = [
-    { id: "all", label: "All" },
-    { id: "published", label: "Published" },
-    { id: "draft", label: "Draft" },
+  const statusOptions = [
+    { value: "all", label: "All" },
+    { value: "published", label: "Published" },
+    { value: "draft", label: "Draft" },
   ];
 
   const columns = [
@@ -210,6 +210,15 @@ export function ArtistPortfolioTable({
   const table = useReactTable({
     data: artists,
     columns,
+    pageCount: Math.ceil(totalCount / pageSize),
+    state: {
+      pagination: { pageIndex: page - 1, pageSize },
+    },
+    manualPagination: true,
+    onPaginationChange: (updater) => {
+      const next = typeof updater === "function" ? updater({ pageIndex: page - 1, pageSize }) : updater;
+      setParams({ page: next.pageIndex + 1 });
+    },
     getCoreRowModel: getCoreRowModel(),
   });
 
@@ -228,10 +237,10 @@ export function ArtistPortfolioTable({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <TableSearchInput
-          value={q}
-          onChange={(q) => setParams({ q, page: 1 })}
+          value={searchValue}
+          onChange={setSearchValue}
+          onSearch={(v) => setParams({ q: v })}
           placeholder="Search by stage name or slug..."
-          disabled={isPending}
         />
         <button
           onClick={() => {
@@ -245,23 +254,21 @@ export function ArtistPortfolioTable({
       </div>
 
       <FilterTabs
-        tabs={statusTabs}
-        value={status}
-        onChange={(status) => setParams({ status, page: 1 })}
-        disabled={isPending}
+        options={statusOptions}
+        active={status}
+        onChange={(value) => setParams({ status: value })}
       />
 
-      <div className="overflow-x-auto">
-        <DataTable table={table} />
-      </div>
+      <DataTable table={table} isPending={isPending} />
 
       <DataTablePagination
-        table={table}
         page={page}
-        pageSize={pageSize}
+        pageCount={table.getPageCount()}
         totalCount={totalCount}
         onPageChange={(p) => setParams({ page: p })}
-        disabled={isPending}
+        pageSize={pageSize}
+        onPageSizeChange={(size) => setParams({ pageSize: size, page: 1 })}
+        isPending={isPending}
       />
     </div>
   );
