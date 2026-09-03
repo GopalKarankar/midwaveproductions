@@ -42,7 +42,7 @@ export async function Footer() {
             <br />
             All Rights Reserved
           </p>
-          <ul className="flex gap-4">
+          <ul className="flex flex-wrap gap-4">
             <li>
               <a
                 href="/terms"
@@ -57,6 +57,22 @@ export async function Footer() {
                 className="font-mono text-xs text-text hover:text-accent transition-colors duration-200 tracking-widest uppercase"
               >
                 Privacy ↗
+              </a>
+            </li>
+            <li>
+              <a
+                href="/feedback"
+                className="font-mono text-xs text-text hover:text-accent transition-colors duration-200 tracking-widest uppercase"
+              >
+                Feedback ↗
+              </a>
+            </li>
+            <li>
+              <a
+                href="/report-a-problem"
+                className="font-mono text-xs text-text hover:text-accent transition-colors duration-200 tracking-widest uppercase"
+              >
+                Report a Problem ↗
               </a>
             </li>
           </ul>

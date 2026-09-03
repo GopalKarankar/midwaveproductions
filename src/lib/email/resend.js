@@ -53,3 +53,40 @@ export async function sendStudioReservationConfirmationEmail({
     text: `Hi ${requesterName},\n\nWe've received your studio reservation request for ${dateStr} (${purpose}). We'll confirm availability within 24 hours.\n\n— Midwave Productions`,
   });
 }
+
+export async function sendFeedbackNotificationEmail({
+  name,
+  email,
+  category,
+  rating,
+  message,
+}) {
+  const resend = getClient();
+  const ratingStr = rating ? `\nRating: ${rating}/5` : "";
+  return resend.emails.send({
+    from: FROM_ADDRESS,
+    to: process.env.CONTACT_EMAIL_TO,
+    replyTo: email,
+    subject: `New feedback from ${name} — ${category}`,
+    text: `From: ${name} <${email}>\nCategory: ${category}${ratingStr}\n\n${message}`,
+  });
+}
+
+export async function sendProblemReportNotificationEmail({
+  name,
+  email,
+  category,
+  severity,
+  message,
+  pageUrl,
+}) {
+  const resend = getClient();
+  const urlStr = pageUrl ? `\nPage: ${pageUrl}` : "";
+  return resend.emails.send({
+    from: FROM_ADDRESS,
+    to: process.env.CONTACT_EMAIL_TO,
+    replyTo: email,
+    subject: `New problem report from ${name} — ${severity} ${category}`,
+    text: `From: ${name} <${email}>\nCategory: ${category}\nSeverity: ${severity}${urlStr}\n\n${message}`,
+  });
+}

@@ -4,6 +4,7 @@ import "./globals.css";
 import { LoadingScreen } from "@/components/layout/LoadingScreen";
 import { Navbar } from "@/components/layout/Navbar";
 import { BlockedNotice } from "@/components/layout/BlockedNotice";
+import RouteProgressBar from "@/components/layout/RouteProgressBar";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -39,6 +40,7 @@ export default function RootLayout({ children }) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <RouteProgressBar />
         <Suspense fallback={null}>
           <BlockedNotice />
         </Suspense>

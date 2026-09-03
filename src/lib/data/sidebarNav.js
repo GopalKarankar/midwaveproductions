@@ -35,8 +35,10 @@ export const adminSidebarConfig = {
     { n: 13, label: "Blog", href: "/dashboard/blog" },
     { n: 14, label: "Pricing", href: "/dashboard/pricing" },
     { n: 15, label: "Reserve Studio", href: "/dashboard/reserve-studio" },
-    { n: 16, label: "Artist Portfolio", href: "/dashboard/artist-portfolio" },
-    { n: 17, label: "Profile", href: "/dashboard/profile" },
-    { n: 18, label: "Settings", href: "/dashboard/settings" },
+    { n: 16, label: "Feedback", href: "/dashboard/feedback" },
+    { n: 17, label: "Problem Reports", href: "/dashboard/problem-reports" },
+    { n: 18, label: "Artist Portfolio", href: "/dashboard/artist-portfolio" },
+    { n: 19, label: "Profile", href: "/dashboard/profile" },
+    { n: 20, label: "Settings", href: "/dashboard/settings" },
   ],
 };
