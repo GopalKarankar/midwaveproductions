@@ -40,3 +40,35 @@ export function parsePageParams(
 export function serializeDocs(docs) {
   return JSON.parse(JSON.stringify(docs));
 }
+
+export function getLocalTzOffset(date = new Date()) {
+  const offsetMin = -date.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? "+" : "-";
+  const abs = Math.abs(offsetMin);
+  const hh = String(Math.floor(abs / 60)).padStart(2, "0");
+  const mm = String(abs % 60).padStart(2, "0");
+  return `${sign}${hh}:${mm}`;
+}
+
+function formatLocalDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function buildDailySeries(aggResult, rangeStart, days) {
+  const countsByDay = new Map(aggResult.map((d) => [d._id, d.count]));
+  const series = [];
+  for (let i = 0; i < days; i++) {
+    const day = new Date(rangeStart);
+    day.setDate(day.getDate() + i);
+    const key = formatLocalDateKey(day);
+    series.push({
+      date: key,
+      label: day.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      count: countsByDay.get(key) ?? 0,
+    });
+  }
+  return series;
+}

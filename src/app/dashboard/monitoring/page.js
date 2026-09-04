@@ -2,13 +2,14 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/getSession";
 import dbConnect from "@/lib/mongodb/connect";
 import ApiRequestLog from "@/lib/mongodb/models/ApiRequestLog";
-import { parsePageParams, escapeRegex, serializeDocs } from "@/lib/mongodb/queryHelpers";
+import { parsePageParams, escapeRegex, serializeDocs, getLocalTzOffset, buildDailySeries } from "@/lib/mongodb/queryHelpers";
 import { SectionNumber } from "@/components/ui/SectionNumber";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { MonitoringLogsTable } from "@/components/admin/MonitoringLogsTable";
+import { UserTrafficChart } from "@/components/admin/UserTrafficChart";
 
 export const metadata = {
-  title: "API Requests - Midwave Productions",
+  title: "User Traffic - Midwave Productions",
 };
 
 export default async function MonitoringPage({ searchParams }) {
@@ -38,7 +39,11 @@ export default async function MonitoringPage({ searchParams }) {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
 
-  const [recentLogs, totalCount, totalToday, errorAgg, topEndpoints, rateLimitBlocksToday] = await Promise.all([
+  const startOfRange = new Date(startOfToday);
+  startOfRange.setDate(startOfRange.getDate() - 6);
+  const tz = getLocalTzOffset(startOfToday);
+
+  const [recentLogs, totalCount, totalToday, errorAgg, topEndpoints, rateLimitBlocksToday, dailyRequestsAgg] = await Promise.all([
     ApiRequestLog.find(filter).sort(sort).skip(skip).limit(limit).lean(),
     ApiRequestLog.countDocuments(filter),
     ApiRequestLog.countDocuments({ createdAt: { $gte: startOfToday } }),
@@ -59,9 +64,15 @@ export default async function MonitoringPage({ searchParams }) {
       { $limit: 5 },
     ]),
     ApiRequestLog.countDocuments({ createdAt: { $gte: startOfToday }, rateLimited: true }),
+    ApiRequestLog.aggregate([
+      { $match: { createdAt: { $gte: startOfRange } } },
+      { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: tz } }, count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]),
   ]);
 
   const errorRate = errorAgg[0]?.total ? Math.round((errorAgg[0].errors / errorAgg[0].total) * 100) : 0;
+  const trafficSeries = buildDailySeries(dailyRequestsAgg, startOfRange, 7);
 
   const logs = serializeDocs(recentLogs);
 
@@ -79,7 +90,7 @@ export default async function MonitoringPage({ searchParams }) {
     <div className="px-8 py-12">
       <div className="flex items-center gap-3 mb-12">
         <SectionNumber n="8" />
-        <SectionHeading className="!text-3xl">API Requests</SectionHeading>
+        <SectionHeading className="!text-3xl">User Traffic</SectionHeading>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
@@ -101,6 +112,8 @@ export default async function MonitoringPage({ searchParams }) {
           </div>
         ))}
       </div>
+
+      <UserTrafficChart data={trafficSeries} />
 
       {topEndpoints.length > 0 && (
         <div className="border border-border p-6 mb-12">
